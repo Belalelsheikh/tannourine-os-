@@ -1,0 +1,35 @@
+# deps
+node_modules/
+
+# build output
+dist/
+dist-ssr/
+build/
+
+# env / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Claude Code local state — can contain plaintext credentials
+.claude/settings.local.json
+.claude/local/
+
+# supabase local state
+supabase/.branches/
+supabase/.temp/
+.supabase/
+
+# editor / OS
+.DS_Store
+.vscode/
+.idea/
+*.sw?
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*

@@ -1,0 +1,16 @@
+[
+ {"email":"elhag@tannourine.local","name":"الحاج","role":"mgmt","scope":"الكل"},
+ {"email":"ali@tannourine.local","name":"علي","role":"router","scope":"الكل"},
+ {"email":"hossam@tannourine.local","name":"حسام","role":"supervisor","scope":"القاهرة"},
+ {"email":"mohamed.ragab@tannourine.local","name":"محمد رجب","role":"supervisor","scope":"القاهرة"},
+ {"email":"marwa@tannourine.local","name":"مروه","role":"supervisor","scope":"الكل"},
+ {"email":"nada@tannourine.local","name":"ندي","role":"coordinator","scope":"القاهرة","supervisor_email":null},
+ {"email":"rana@tannourine.local","name":"رنا","role":"coordinator","scope":"القاهرة","supervisor_email":null},
+ {"email":"donia@tannourine.local","name":"دنيا","role":"coordinator","scope":"القاهرة","supervisor_email":null},
+ {"email":"mohamed.helmy@tannourine.local","name":"محمد حلمي","role":"coordinator","scope":"القاهرة","supervisor_email":null},
+ {"email":"ragab.ahmed@tannourine.local","name":"رجب أحمد","role":"coordinator","scope":"القاهرة","supervisor_email":null},
+ {"email":"abdelbaset@tannourine.local","name":"محمد عبد الباسط","role":"coordinator","scope":"القاهرة","supervisor_email":null},
+ {"email":"abdelmoneim@tannourine.local","name":"عبدالمنعم","role":"coordinator","scope":"القاهرة","supervisor_email":null},
+ {"email":"amr@tannourine.local","name":"عمرو","role":"invoice","scope":"الكل"},
+ {"email":"salma@tannourine.local","name":"سلمي","role":"finance","scope":"الكل"}
+]

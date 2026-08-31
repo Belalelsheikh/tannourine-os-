@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>تنورين مصر — نظام التشغيل</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+:root{
+  --ink:#10222E; --slate:#33505E; --paper:#EDF0EE; --card:#FBFCFB;
+  --line:#D3DAD7; --crit:#B23A26; --warn:#C58218; --ok:#0E6E63; --mute:#7C8B92;
+  --violet:#5B4A8A;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:#C8CFCB;font-family:'IBM Plex Sans Arabic',system-ui,sans-serif;color:var(--ink);
+  font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;
+  display:flex;justify-content:center;align-items:flex-start;min-height:100vh;padding:24px 12px}
+.phone{width:100%;max-width:430px;background:var(--paper);border-radius:22px;overflow:hidden;
+  box-shadow:0 18px 50px rgba(16,34,46,.28);display:flex;flex-direction:column;min-height:740px;position:relative}
+@media(max-width:470px){body{padding:0}.phone{border-radius:0;min-height:100vh;box-shadow:none}}
+.bar{background:var(--ink);color:var(--paper);padding:13px 16px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.bar .who{font-size:12.5px;opacity:.75}.bar .ttl{font-size:16.5px;font-weight:600}
+.bar button{background:none;border:1px solid rgba(237,240,238,.35);color:var(--paper);font-family:inherit;
+  font-size:12.5px;padding:5px 10px;cursor:pointer}
+.bar button:active{background:rgba(237,240,238,.15)}
+.rolechip{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:99px;background:var(--ok);color:#fff;margin-inline-start:6px;vertical-align:middle}
+.body{padding:14px;flex:1;overflow-y:auto;padding-bottom:76px}
+.hint{font-size:13px;color:var(--slate);margin-bottom:10px}
+.small{font-size:12px;color:var(--mute)}
+.tabs{position:absolute;bottom:0;right:0;left:0;display:flex;background:var(--ink);border-top:1px solid #0a161e}
+.tabs button{flex:1;background:none;border:none;color:var(--paper);opacity:.55;font-family:inherit;
+  font-size:12px;padding:10px 2px 12px;cursor:pointer;position:relative;font-weight:500}
+.tabs button.on{opacity:1;font-weight:700}
+.tabs button.on::after{content:'';position:absolute;top:0;right:20%;left:20%;height:3px;background:var(--ok)}
+.badge{position:absolute;top:4px;inset-inline-end:14%;background:var(--crit);color:#fff;font-size:10px;font-weight:700;
+  border-radius:99px;min-width:17px;height:17px;line-height:17px;padding:0 4px}
+.stat{display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap}
+.stat>div{flex:1;min-width:29%;background:var(--card);border:1px solid var(--line);padding:8px 10px;text-align:center}
+.stat b{display:block;font-family:'IBM Plex Mono',monospace;font-size:21px;font-weight:600;line-height:1.15}
+.stat span{font-size:10.5px;color:var(--slate)}
+.stat .bad b{color:var(--crit)}.stat .good b{color:var(--ok)}.stat .w b{color:var(--warn)}
+.card{background:var(--card);border:1px solid var(--line);margin-bottom:9px;padding:11px 13px}
+.rowbtn{width:100%;background:var(--card);border:1px solid var(--line);border-right:4px solid var(--line);
+  padding:12px 13px;margin-bottom:7px;text-align:right;cursor:pointer;display:flex;justify-content:space-between;
+  align-items:center;gap:8px;font-family:inherit;transition:background .12s}
+.rowbtn:active{background:#E6EBE8}
+.rowbtn .nm{font-size:15.5px;font-weight:600;display:block}
+.rowbtn .sub{font-size:11.5px;color:var(--mute);display:block;margin-top:1px}
+.rowbtn.warn{border-right-color:var(--crit)}.rowbtn.ok{border-right-color:var(--ok)}
+.rowbtn.viol{border-right-color:var(--violet)}
+.pill{font-size:10.5px;padding:3px 8px;border-radius:99px;white-space:nowrap;font-weight:600}
+.pill.r{background:#F6E3DF;color:var(--crit)}.pill.g{background:#DDEAE7;color:var(--ok)}
+.pill.y{background:#F5EAD3;color:#8a5c10}.pill.v{background:#E6E1F2;color:var(--violet)}
+.pill.n{background:#E4E9E6;color:var(--slate)}
+.send{width:100%;padding:14px;background:var(--ink);color:var(--paper);border:none;font-family:inherit;
+  font-size:16px;font-weight:600;cursor:pointer;margin-top:4px}
+.send:disabled{background:#B4BFBA;cursor:not-allowed}
+.send.okbtn{background:var(--ok)}
+.ghost{width:100%;padding:11px;background:transparent;border:1px solid var(--slate);color:var(--slate);
+  font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;margin-top:7px}
+.mini{font-family:inherit;font-size:12.5px;font-weight:600;padding:7px 12px;border:1px solid var(--line);
+  background:var(--card);cursor:pointer;color:var(--slate)}
+.mini.dark{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.mini.grn{background:var(--ok);color:#fff;border-color:var(--ok)}
+.mini.red{background:var(--crit);color:#fff;border-color:var(--crit)}
+.btnrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.err{font-size:13px;color:var(--crit);margin:8px 0;font-weight:600}
+.f{margin-bottom:10px}
+.f label{display:block;font-size:12.5px;color:var(--slate);margin-bottom:5px}
+.f label em{font-style:normal;color:var(--crit);font-weight:700}
+.f input,.f select{width:100%;border:1px solid var(--line);background:var(--card);font-family:inherit;
+  font-size:15.5px;padding:10px 11px;color:var(--ink)}
+.f input:focus,.f select:focus{outline:2px solid var(--ok)}
+.step{display:flex;align-items:center;border:1px solid var(--line)}
+.step button{width:38px;height:40px;border:none;background:#EDF0EE;font-size:20px;font-weight:600;color:var(--slate);cursor:pointer;font-family:inherit;flex:none}
+.step button:active{background:var(--ink);color:var(--paper)}
+.step input{flex:1;width:100%;min-width:0;border:none;text-align:center;font-family:'IBM Plex Mono',monospace;
+  font-size:18px;font-weight:600;background:var(--card);color:var(--ink);height:40px}
+.step input:focus{outline:2px solid var(--ok);outline-offset:-2px}
+.step input.zero{color:var(--crit)}
+.sku{background:var(--card);border:1px solid var(--line);margin-bottom:9px}
+.sku h3{font-size:14.5px;font-weight:600;padding:9px 12px;border-bottom:1px solid var(--line);background:#F3F6F4;display:flex;justify-content:space-between;align-items:center}
+.sku h3 .tag{font-size:10px;font-weight:600;color:var(--violet)}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line)}
+.fcell{background:var(--card);padding:8px 10px}
+.fcell label{display:block;font-size:11.5px;color:var(--slate);margin-bottom:4px}
+.fcell label em{font-style:normal;color:var(--crit)}
+.reason{padding:9px 12px;border-top:1px solid var(--line);background:#FCF6F4}
+.reason p{font-size:12px;color:var(--crit);font-weight:600;margin-bottom:7px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{font-family:inherit;font-size:12.5px;padding:6px 11px;border:1px solid var(--line);background:var(--card);cursor:pointer;color:var(--slate)}
+.chips button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper);font-weight:600}
+.photo{width:100%;background:var(--card);border:1px dashed var(--line);padding:13px;margin:4px 0 10px;
+  font-family:inherit;font-size:14px;color:var(--slate);cursor:pointer;text-align:center}
+.photo.on{border-style:solid;border-color:var(--ok);color:var(--ok);font-weight:600}
+.thumb{width:100%;max-height:150px;object-fit:cover;border:1px solid var(--line);margin-bottom:8px}
+table.t{width:100%;border-collapse:collapse;background:var(--card);font-size:13px;margin-bottom:10px}
+.t th,.t td{border:1px solid var(--line);padding:6px 8px;text-align:right}
+.t th{background:#F3F6F4;font-size:11.5px;color:var(--slate)}
+.t td.mono{font-family:'IBM Plex Mono',monospace;font-weight:600}
+.login-wrap{padding:34px 22px}
+.brand{text-align:center;margin-bottom:26px}
+.brand h1{font-size:24px;font-weight:700;letter-spacing:.5px}
+.brand p{font-size:12.5px;color:var(--slate)}
+.seg{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.seg button{font-family:inherit;font-size:12.5px;padding:7px 12px;border:1px solid var(--line);background:var(--card);cursor:pointer;color:var(--slate)}
+.seg button.on{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600}
+.toast{position:absolute;bottom:66px;right:14px;left:14px;background:var(--ink);color:var(--paper);
+  padding:11px 14px;font-size:13.5px;border-radius:6px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:50;text-align:center}
+.toast.show{opacity:.96}
+.sect{font-size:13px;font-weight:700;color:var(--slate);margin:14px 0 8px;padding-bottom:4px;border-bottom:2px solid var(--line)}
+.day-tabs{display:flex;gap:4px;margin-bottom:10px;overflow-x:auto}
+.day-tabs button{font-family:inherit;font-size:12px;padding:6px 10px;border:1px solid var(--line);background:var(--card);cursor:pointer;white-space:nowrap}
+.day-tabs button.on{background:var(--ok);color:#fff;border-color:var(--ok);font-weight:700}
+[hidden]{display:none!important}
+.empty{text-align:center;color:var(--mute);font-size:13.5px;padding:26px 10px}
+.feeditem{border-right:4px solid var(--line)}
+.feeditem.ok{border-right-color:var(--ok)}.feeditem.bad{border-right-color:var(--crit)}
+.feeditem.pend{border-right-color:var(--warn)}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="bar" id="topbar" hidden>
+    <div><div class="who" id="uwho"></div><div class="ttl" id="uttl">تنورين مصر</div></div>
+    <div style="display:flex;gap:6px">
+      <button id="refreshBtn">تحديث</button>
+      <button id="logoutBtn">خروج</button>
+    </div>
+  </div>
+  <div class="body" id="view"></div>
+  <div class="tabs" id="tabs" hidden></div>
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+/* ================= DATA LAYER ================= */
+const OUTLET_SEED = [["Circle K","القاهرة","صحراوى1/ داندى مول","rep","unknown","احمد عبد الرحمن","1068966200"],["Circle K","الإسكندرية","رشدى","rep","unknown","ا/ ادهم","1278885363"],["Circle K","القاهرة","صحراوى2/ داندى مول","rep","unknown","ا/ حسام","1006434400"],["Circle K","الإسكندرية","الشاطبى","rep","unknown","ا/ احمد حامد","1274484911"],["Circle K","القاهرة","صحراوى3/ داندى مول","rep","unknown","محمد سيد","1282113517"],["Circle K","الإسكندرية","الازاريطه","rep","unknown","ا/حمزه حسن","1276052306"],["Circle K","القاهرة","وصله دهشور/واتر بارك","rep","unknown","ا/ عبد الله","1018201555"],["Circle K","الإسكندرية","سيدى بشر","rep","unknown","ا/ اسماء","1226389251"],["Circle K","القاهرة","ديونز","rep","unknown","ا/ حسام","1117816574"],["Circle K","الإسكندرية","جليم","rep","unknown","ا/ طاهر","01207282528/ 1149226768"],["Circle K","القاهرة","فودافون 1","rep","unknown","ا/احمد","1127788992"],["Circle K","الإسكندرية","ش45","rep","unknown","ا/ نورهان","1555259660"],["Circle K","القاهرة","فودافون2","rep","unknown","ا/خالد","1096663863"],["Circle K","الإسكندرية","التعمير1","rep","unknown","ا/ احمد شاهين","1279715797"],["Circle K","القاهرة","الشهيد2","rep","unknown","ا/ شيماء","1145733817"],["Circle K","الإسكندرية","التعمير2","rep","unknown","ا/احمد شاهين","1279815797"],["Circle K","القاهرة","ميدور","rep","unknown","ا/ منعم","1119221907"],["Circle K","الإسكندرية","انطونيادس","rep","unknown","ا/ بهاء","1224755874"],["Circle K","القاهرة","الرحاب1","rep","unknown","ا/احمد","1212226424"],["Circle K","الإسكندرية","النهضه","rep","unknown","ا/ عمرو","1281895300"],["Circle K","القاهرة","الجامعه","rep","unknown","ا/ ابراهيم","1044446325"],["Circle K","الإسكندرية","كيلو38","rep","unknown","ا/ محمد البدلى","1203457097"],["Circle K","القاهرة","الرحاب بواب20","rep","unknown","ا /محمد ايمن","1112156649"],["Circle K","الإسكندرية","كيلو27","rep","unknown","ا/محمد- ا/ رومانى","1200254301-01012781525"],["Circle K","القاهرة","مفيده 1","rep","unknown","ا/ محمد","1100655107"],["Circle K","الإسكندرية","ام زغيو","rep","unknown","ا/ مؤمن","1200418314"],["Circle K","القاهرة","مفيده 2","rep","unknown","ا/ نادر","1159598597"],["Circle K","الإسكندرية","كيلو23","rep","unknown","ا/ احمد عرفه_ عيد","1220422184_01276666243"],["Circle K","القاهرة","مفيده 3","rep","unknown","ا/ محمد","1100655107"],["Circle K","الإسكندرية","المكس","rep","unknown","ا/ احمد حمدى","1228170246"],["Circle K","القاهرة","كونكورد بلازا","rep","unknown","ا/ احمد السيد","1129054565"],["Circle K","الإسكندرية","الموقف الجديد","rep","unknown","ا/ منعم","1113570699"],["Circle K","القاهرة","ترينف","rep","unknown","ا /عبد اللطيف","1124562024"],["Circle K","الإسكندرية","الفردوس/ مرغم","rep","unknown","ا/ محمد سعيد","1200254301"],["Circle K","القاهرة","السادات","rep","unknown","ا/ حسام","1069139897"],["Circle K","الإسكندرية","اليكس جيت","rep","unknown","ا/ عمرو","1553593413"],["Circle K","القاهرة","الحريه","rep","unknown","ا/ جومانا","1149137836"],["Circle K","القاهرة","المشير","rep","unknown","ا/ اسلام","1018425672"],["Circle K","الإسكندرية","مدير فروع الساحل","rep","unknown","ا/ عمرو","1274163444"],["Circle K","القاهرة","الزمالك","rep","unknown","ا/ يوسف","1151731156"],["Circle K","الإسكندرية","ابراج العلمين","rep","unknown","محمد جوده","1200188996"],["Circle K","القاهرة","الدقى","rep","unknown","ا/على","1155777956"],["Circle K","الإسكندرية","مراسى شيل اوت","rep","unknown","احمد خالد","1201500757"],["Circle K","القاهرة","طيران1","rep","unknown","ا/ زياد","1287282958"],["Circle K","الإسكندرية","مراسى كلاب هاوس","rep","unknown","محمد جلال","1225805940"],["Circle K","القاهرة","طيران2","rep","unknown","ا/ على","1067198988"],["Circle K","الإسكندرية","هاسييندا كلاب هاوس","rep","unknown","عبد الرحمن","1213100467"],["Circle K","القاهرة","هشام بركات","rep","unknown","ا/ ايمان","1282113582"],["Circle K","الإسكندرية","هاسييندا شيل اوت","rep","unknown","ابانوب","1200173795"],["Circle K","القاهرة","نحاس 1","rep","unknown","ا/ احمد","1210101193"],["Circle K","الإسكندرية","امواج","rep","unknown","محمود غازى","1205841576"],["Circle K","القاهرة","نحاس2","rep","unknown","ا/ احمد","1067745421"],["Circle K","الإسكندرية","حكمه1","rep","unknown","محمود عويس","1128667445"],["Circle K","القاهرة","شيل اوت شيراتون","rep","unknown","ا/احمد","1274891816"],["Circle K","الإسكندرية","حكمه2","rep","unknown","محمد ابو المجد","1288238646"],["Circle K","القاهرة","سفير","rep","unknown","ا/ رضوى","1225729394"],["Circle K","الإسكندرية","مدير فروع الساحل","rep","unknown","ا/ محمد حليم","1281443809"],["Circle K","القاهرة","A1 وادى النطرون","rep","unknown","ا/ يوسف","1211350479"],["Circle K","الإسكندرية","مارينا 4","rep","unknown","عبد الرحمن","1140750302"],["Circle K","القاهرة","الجامعه ٢","rep","unknown","ا/ على","1061390302"],["Circle K","الإسكندرية","مارينا ستريب","rep","unknown","احمد","150332934"],["Circle K","القاهرة","كايرو فيستيفال","rep","unknown","ا/ زمزم","1202879973"],["Circle K","الإسكندرية","مارينا 7","rep","unknown","محمود سعيد","1125644882"],["Circle K","القاهرة","المعداوى","rep","unknown","ا/ انطونيوس","1013081086"],["Circle K","الإسكندرية","مارينا 5","rep","unknown","محمد سعيد","1225806097"],["Circle K","القاهرة","تحيا مصر1","rep","unknown","ا/ محمد","1155912943"],["Circle K","الإسكندرية","الحمام","rep","unknown","مصطفى عبد السلام","1200328663"],["Circle K","القاهرة","وصله دهشور G7","rep","unknown","ا/ عبد الرحمن","1145022917"],["Circle K","الإسكندرية","مارينا 2","rep","unknown","سامح","1100034595"],["Circle K","القاهرة","حدايق الاهرام/ البوابه الرابعه","rep","unknown","ا/خالد","1270544663"],["Circle K","القاهرة","ستريب اكتوبر","rep","unknown","ا/ سهيله","1116794218"],["Circle K","الإسكندرية","الزعفرانه","rep","unknown","سيد حسن","1271408523"],["Circle K","القاهرة","الجبخانه","rep","unknown","ا/ انس","1159213101"],["Circle K","الإسكندرية","الجلاله","rep","unknown","احمد على","1202138439"],["Circle K","القاهرة","طريق السويس/ الشاذلى","rep","unknown","ا/ احمد سامى","1094664640"],["Circle K","الإسكندرية","ملاحه1","rep","unknown","محمود ياسين","1154599822"],["Circle K","القاهرة","محور السادات","rep","unknown","ا/ احمد الحضرى","1151120408"],["Circle K","الإسكندرية","ملاحه2","rep","unknown","محمود محمد","1282031837"],["Circle K","القاهرة","البطراوى1","rep","unknown","ا/ محمد","1111029315"],["Circle K","الإسكندرية","مول السخنه","rep","unknown","نور","1210383707"],["Circle K","القاهرة","كوبرى المرغنى","rep","unknown","ا/ محمد","1017202620"],["Circle K","الإسكندرية","شرم الشيخ1","rep","unknown","مصطفى عمر","1281963840"],["Circle K","القاهرة","السنهورى","rep","unknown","ا/احمد","1144173477"],["Circle K","الإسكندرية","شرم الشيخ2","rep","unknown","شيماء","1005034131"],["Circle K","القاهرة","النحاس3","rep","unknown","ا/عمر","1067802910"],["Circle K","الإسكندرية","سخنه جاتا 1","rep","unknown","على اسامه على","1103876670"],["Circle K","القاهرة","سوديك هوب","rep","unknown","ا/احمد","1282173617"],["Circle K","الإسكندرية","واحه محمد 1","rep","unknown","احمد بسيونى","1012717379"],["Circle K","القاهرة","موبيل المعادى","rep","unknown","ا /احمد","1006791872"],["Circle K","الإسكندرية","واحه محمد2","rep","unknown","وليد صابر","1278654544"],["Circle K","القاهرة","الخمايل","rep","unknown","ا/ علاء","1061909074"],["Circle K","القاهرة","بلو بارك","rep","unknown","ا/داليا","1201968429"],["Circle K","القاهرة","بارك لاجون","rep","unknown","ا/مينا","1033954916"],["Circle K","القاهرة","ايفورى  بيزنس بارك","rep","unknown","ا/احمد","1555608043"],["Circle K","القاهرة","بوليجون","rep","unknown","منطقه اكتوبر ا/ندى","1127788992"],["Circle K","القاهرة","عدلى","rep","unknown","ا/كريم","1552163737"],["Circle K","القاهرة","الكفراوى1","rep","unknown","ا/ يوسف","1202559895"],["Circle K","القاهرة","الكفراوى2","rep","unknown","ا/ انور","1200003785"],["Circle K","القاهرة","الاهلى 1","rep","unknown","ا/ حنان","1200670131"],["Circle K","القاهرة","الاهلى 2","rep","unknown","ا/عبد الله","1152961245"],["Circle K","القاهرة","الجلاء1","rep","unknown","ا/ ادهم","1222213342"],["Circle K","القاهرة","الجلاء2","rep","unknown","ا/ الاء","1126276548"],["Circle K","القاهرة","شيراتون وواك","rep","unknown","ا/ عبده","1154238558"],["Circle K","القاهرة","شيراتون ستريب","rep","unknown","ا/ حفيظ","1203048122"],["Circle K","القاهرة","البطراوى2","rep","unknown","ا/ هايدى","1098184657"],["Circle K","القاهرة","السنهورى 2","rep","unknown","ا/ صلاح","1221519671"],["Circle K","القاهرة","الواحه","rep","unknown","ا/ تونى","1221498629"],["Circle K","القاهرة","السويس 2/ المطار","rep","unknown","ا/ احمد","1120708604"],["Circle K","القاهرة","الشهيد1","rep","unknown","ا/ خالد","1019375946"],["Circle K","القاهرة","العبور","rep","unknown","ا/ ادهم","1119273812"],["Circle K","القاهرة","عبد الخالق ثروت","rep","unknown","ا/ كريم","1552163737"],["Circle K","القاهرة","ستي سكيب","rep","unknown","مدير التشغيل ا/عزت","1143121195"],["Circle K","القاهرة","دولفين","rep","unknown","ا/ احمد","1145651175"],["Circle K","القاهرة","سمارت فيلدج /القريه الذكيه1/سوديك ميديكال/اكتوبر","rep","unknown","ا /عبد الله","1044416357"],["Circle K","القاهرة","سمارت فيلدج /القريه الذكيه2","rep","unknown","ا /عبد الله","1044416357"],["Circle K","القاهرة","تحيا مصر ٢","rep","unknown","ا/ احمد","1003381330"],["Circle K","القاهرة","النقل الجماعى","rep","unknown","مصطفى","1110378483"],["Circle K","القاهرة","وصال 1","rep","unknown","ا/ عبد الله","1033878920"],["Circle K","القاهرة","وصال2","rep","unknown","ا /احمد","1152492133"],["Circle K","القاهرة","محمود نصر1","rep","unknown","ا/ عمرو","1020731387"],["Circle K","القاهرة","محمود نصر2","rep","unknown","ا/ شوقى","1009732446"],["Master","القاهرة","الخمايل","rep","cheque","ابراهيم","1096294656"],["Master","القاهرة","وصله دهشور","rep","cheque","ا/ ياسمين","1123559315"],["Master","القاهرة","دريم/ المتحف","rep","cheque","ا/ احمد سمير_ا/ احمد","1111153632_01001926121"],["Master","القاهرة","الرمايه","rep","cheque","ا/ يوسف","1147160694"],["Master","القاهرة","الفردوس","rep","cheque","ا/هشام","1004084470"],["Master","القاهرة","محمد زكى","rep","cheque","ا/ احمد","1012165516"],["Master","القاهرة","محمد نجيب","rep","cheque","ا/ بدر","1149710494"],["Master","القاهرة","السخنه1","rep","cheque","ا/ محمد","1288717198"],["Master","القاهرة","السخنه2","rep","cheque","ا/ على","1120895800"],["Master","القاهرة","الشروق","rep","cheque","ا/ عمر","1201944758"],["Master","القاهرة","السلام","rep","cheque","ا/ جاسر","1129322085"],["Master","القاهرة","العبور","rep","cheque","ا/شادى","1148410734"],["Master","القاهرة","المقطم","rep","cheque","ا / محمد زكريا","1148816605"],["Master","القاهرة","جاردينيا","rep","cheque","ا/ احمد سمير","1205654431"],["Master","القاهرة","اللوتس","rep","cheque","ا/ اسلام","1155569416"],["Master","القاهرة","القطاميه","rep","cheque","ا/ عمر","1155973768"],["Master","القاهرة","زهراء المعادى","rep","cheque","ا/اشرف","1001933794"],["Master","القاهرة","المهندسين/ العجوزه","rep","cheque","ا/ وائل","1001148609"],["Master","القاهرة","المرغنى","rep","cheque","ا/ محمد","1225397030"],["Master","القاهرة","العروبه/","rep","cheque","ا/ عبد الله _محمد عاطف","1022318754_01061763963"],["Master","القاهرة","روكسى","rep","cheque","ا/ يوسف_محمد رجب","1010208720_01125621148"],["Master","القاهرة","صلاح سالم/التعاون/ الاستاد","rep","cheque","ا/محمد_مختار","1200036347_01227471596"],["Master","القاهرة","الغابه","rep","cheque","ا/ وليد","1064139052"],["Master","القاهرة","الصاعقه","rep","cheque","ا/ محمد رجب","1125621148"],["Master","القاهرة","كايرو فيستيفال","rep","cheque","ا/ محمد محمود","1150526568"],["Master","القاهرة","اوتو ستراد/ شيراتون","rep","cheque","ا / حسين","1125968645"],["Master","القاهرة","مستشفى الجوى / التسعين الشمالى","rep","cheque","محمد السيد","1123116422"],["Master","القاهرة","ط الفيوم","rep","cheque","ا/ احمد سمير","1111153632"],["Master","القاهرة","السخنه3","rep","cheque","ا/هادى","1273519765"],["Master","القاهرة","مدير الغردقه","rep","cheque","ا/ عمرو","1150123987"],["Master","القاهرة","شيراتون","rep","cheque","",""],["Master","الإسكندرية","سيدى جابر","rep","cheque","ا/ عبد الرحمن","1555678844"],["Master","الإسكندرية","سبورتنج","rep","cheque","ا/ ياسمين _ا/ مصطفى","1281713460/01155957433"],["Master","الإسكندرية","الصحراوى","rep","cheque","ا/احمد عز","1125739835"],["Master","الإسكندرية","التعمير1","rep","cheque","",""],["Master","الإسكندرية","التعمير2","rep","cheque","",""],["Seoudi","القاهرة","زايد","mixed","cheque","ا/ على","01068829355_01099993461"],["Seoudi","القاهرة","سوديك اكتوبر","mixed","cheque","ا/ وليد_ا/ احمد","1101600399 _01015711137_01014827367"],["Seoudi","القاهرة","مول العرب","rep","cheque","ا/ عبد الرحمن","01090177795_01288316644"],["Seoudi","القاهرة","دريم","mixed","cheque","ا/كريم_ا/ امام","01008477758_01228887847_01142070227"],["Seoudi","القاهرة","مدينتى","mixed","cheque","ا/ خالد","01044099419_01000835980"],["Seoudi","القاهرة","هاي بارك","mixed","cheque","ا/ عمرو","01066742999_01148979720"],["Seoudi","القاهرة","سوديك التجمع","mixed","cheque","ا/ محمد","01040100556_01280344984"],["Seoudi","القاهرة","الحمد","rep","cheque","ا/ حسام","1144796233"],["Seoudi","القاهرة","مفيده","mixed","cheque","ا/ احمد زكريا","1157749822"],["Seoudi","القاهرة","الشروق","mixed","cheque","ا/ احمد عوض","1150083264"],["Seoudi","القاهرة","واتر واى","mixed","cheque","ا/ سعيد_ا/ محمد","1202433571_01061644478"],["Seoudi","القاهرة","ديستريك5/طريق السخنه","mixed","cheque","ا/ خالد","01124401067_01070926787"],["Seoudi","القاهرة","الحجاز","mixed","cheque","ا/ عادل","01090227754_01271813874"],["Seoudi","القاهرة","الدقى","rep","cheque","ا/ عبد الخالق","01007775828_01062601789"],["Seoudi","القاهرة","سفينكس","rep","cheque","ا/ خالد","1061638887"],["Seoudi","القاهرة","الحكمه","rep","cheque","ا/ محمد","01098119299_01100550478"],["Seoudi","القاهرة","المعاى1","rep","cheque","ا/ ايهاب_ا/محمد","1062337122_01024646874"],["Seoudi","القاهرة","طيران","mixed","cheque","ا/ احمد","1151659744"],["Seoudi","القاهرة","سيتى ستارز","mixed","cheque","ا/ مودى","1025941178"],["Seoudi","القاهرة","مكرم","mixed","cheque","ا/ محمود - احمد مصطفى","1117966424_01050488161"],["Seoudi","القاهرة","هيكل","mixed","cheque","ا/ احمد","1050488161"],["Seoudi","القاهرة","شيراتون","rep","cheque","ا/احمد عاطف_ا/عبد الرحمن","1121111651_01019441420"],["Seoudi","القاهرة","روكسى","rep","cheque","ا/ حمدى","1278123013"],["Seoudi","القاهرة","مراسى","central","cheque","ا/ اسلام","01011025773_01122992319"],["Seoudi","القاهرة","راس الحكمه","central","cheque","ا/ كريم","1115118781"],["Seoudi","القاهرة","العلمين","central","cheque","ا/ احمد","01050488160_01067940471"],["On The Run","القاهرة","زايد","rep","cheque","ا/ احمد عثمان","10053004746"],["On The Run","القاهرة","مينا هاوس/المتحف","rep","cheque","ا/ حسين","1154765864"],["On The Run","القاهرة","جهينه","rep","cheque","ا/ محمد فتحى","1205170415"],["On The Run","القاهرة","داندى مول/ سفينكس","rep","cheque","ا/ اسلام_ا/محمد","1157231660_01110610878"],["On The Run","القاهرة","الرحاب","rep","cheque","ا/محمود_ا/احمد","1144436980"],["On The Run","القاهرة","الجامعه","rep","cheque","ا/ ادهم","1010621691"],["On The Run","القاهرة","اجوره","rep","cheque","ا/ احمد","1205402164"],["On The Run","القاهرة","الحمد","rep","cheque","ا/ احمد سعد","1008440092"],["On The Run","القاهرة","النرجس1","rep","cheque","ا/ وليد","1115584394"],["On The Run","القاهرة","النور ميراج","rep","cheque","ا/ محمد","1007850768"],["On The Run","القاهرة","حلوانى الزراعى معادى","rep","cheque","ا/ يحيى","1140310923"],["On The Run","القاهرة","اللاسلكى المعادى","rep","cheque","ا/ كريم","1115006391"],["On The Run","القاهرة","كليوباترا البطل","rep","cheque","ا/ هانى الحضرى","1121990515"],["On The Run","القاهرة","جامعه الدول","rep","cheque","ا/ ابراهيم","1017046081"],["On The Run","القاهرة","المنيل","rep","cheque","ا/احمد","1117456734"],["On The Run","القاهرة","الملك الصالح","rep","cheque","ا/ عبد الوهاب","1115462057"],["On The Run","القاهرة","خليفه المامون البكرى","rep","cheque","ا/ عبد الله_ا/ محمد","1093505713_01063884403"],["On The Run","القاهرة","النزهه / الماظه","rep","cheque","ا/ مصطفى_ا/ يحيى","1152719811_01004967890"],["On The Run","القاهرة","المرغنى/الحجاز","rep","cheque","ا/احمد_ا/ احمد","1061702624_01008944731"],["On The Run","القاهرة","روكسى","rep","cheque","ا/ حسام_ا/عمرو","1004794847_01008474680"],["On The Run","القاهرة","اوتوستراد","rep","cheque","ا/ علاء","1227815380"],["On The Run","القاهرة","المريوطيه","rep","cheque","ا/ احمد ربيع_ا/ احمد","1201108796_01283832847"],["On The Run","القاهرة","الدقى","rep","cheque","ا/اسامه","1006432929"],["On The Run","القاهرة","نادى الصيد اكتوبر/جمال عبد الناصر","rep","cheque","ا/ ابراهيم","1111394868"],["On The Run","القاهرة","العروبه","rep","cheque","ا/ محمود_ا/محمد","1156356915_01003892722"],["On The Run","القاهرة","مدينتى","rep","cheque","ا/ سامح","1144490315"],["On The Run","القاهرة","النرجس2","rep","cheque","ا/شريف","1123298100"],["On The Run","القاهرة","ريتيل برو / وسط البلد","rep","cheque","ا/ احمد حسن_ا/ ياسر","1010093178_01002328996"],["On The Run","القاهرة","مينى البطل","rep","cheque","ا/احمد_ا/ معاذ","1006268662_ 01029663643"],["On The Run","القاهرة","الفردوس","rep","cheque","عمرو","1550095953"],["On The Run","القاهرة","البساتين/ المعادى","rep","cheque","ا/ احمد","1158882941"],["On The Run","الإسكندرية","العامريه","rep","cheque","ا/ على حميده_","1226283987"],["On The Run","الإسكندرية","سموحه","rep","cheque","اسلام","1113424905"],["Zahran","القاهرة","التجمع الخامس","rep","cheque","ا/ خالد عبد العزيز","1017064171"],["Zahran","القاهرة","الشيخ زايد","rep","cheque","ا/ محمد الشويحى","1211005467"],["Zahran","القاهرة","مدينتى","rep","cheque","ا/ كريم السيوفى","1061333319"],["Zahran","القاهرة","فام بام","rep","cheque","ا/ عبده شلبى","1099034362"],["Zahran","الإسكندرية","سموحه","rep","cheque","ا/ محمد على","1227440445"],["Zahran","الإسكندرية","زيزينيا","rep","cheque","ا/ محمود عبد العاطى","1286173902"],["Zahran","الإسكندرية","العجمى","rep","cheque","ا/ هيثم","1211899934"],["Zahran","الإسكندرية","الفراعنه","rep","cheque","ا/ احمد بسام","1202156912"],["Zahran","الإسكندرية","سوريا","rep","cheque","ا/ محمد ياقوت","1226019956"],["Zahran","الإسكندرية","كفر عبده","rep","cheque","ا/ حسنى السيد","1271440320"],["Zahran","الإسكندرية","المعموره","rep","cheque","ا/ حسن عبد القادر","1288643495"],["Zahran","الإسكندرية","كرير","rep","cheque","ا/ ماهر محروس","1226018980"],["Zahran","الإسكندرية","بدر","rep","cheque","ا/فادى","1169481220"],["Zahran","الإسكندرية","مارينا","rep","cheque","ا/ محمد سليمان","1227381792"],["Zahran","الإسكندرية","العلمين","rep","cheque","ا/ محمد ابو جريشه","1550696916"],["Zahran","الإسكندرية","ماستر/مراسى","rep","cheque","ا/ رضا السعداوى","1100028459"],["Zahran","الإسكندرية","امواج / سيدى عبد الرحمن","rep","cheque","ا/ السيد السيد على","1282331221"],["Zahran","الإسكندرية","الماظه باى","rep","cheque","ا/ عبد الرحيم احمد","1200417776"],["Zahran","الإسكندرية","بورتو السخنه","rep","cheque","ا/ محمود النحراوى","1006917447"],["Gourmet","القاهرة","اركان","central","transfer","ا/ ايهاب سيد","1120009677"],["Gourmet","القاهرة","سيتى ستارز","central","transfer","ا/ محمد_ا/ محمد عواد","1016449950_01064156004"],["Gourmet","القاهرة","الصفوه","central","transfer","ا/ بهاء فكرى","129141917"],["Gourmet","القاهرة","قطاميه هايتس","central","transfer","ا/حسن سعيد","1129432280"],["Gourmet","القاهرة","المعادى9","central","transfer","ا/ بولا نشأت","1116224118"],["Gourmet","القاهرة","مدينتى","central","transfer","ا/ عبد الرحمن محمد","1152192547"],["Gourmet","القاهرة","سوديك","central","transfer","ا/ احمد ابراهيم","1126588836"],["Gourmet","القاهرة","كوف","central","transfer","ا/ حسام","1005081183"],["Gourmet","القاهرة","ابتاون كايرو","central","transfer","ا/ احمد نجم","1103304150"],["Gourmet","القاهرة","يوفينسيوس","central","transfer","ا/ ا احمد","1063773547"],["Gourmet","القاهرة","واتر واى","central","transfer","ا/ احمد مجدى","1121665858"],["Gourmet","القاهرة","الجونا","central","transfer","ا/ احمد جمعه","1158973780"],["Gourmet","القاهرة","G17/ ware house","central","transfer","ا/محمد النوبى","1119044398"],["Gourmet","القاهرة","بورى","central","transfer","ا/ احمد عبد المنعم","1144433079"],["Gourmet","القاهرة","الدقى","central","transfer","ا/ مصطفى موسى","1125424549"],["Gourmet","القاهرة","المعادى دجله","central","transfer","ا/ محمد حسين","1103032338"],["Gourmet","القاهرة","الزمالك","central","transfer","ا/ احمد حمدى","1117732388"],["Gourmet","القاهرة","الماظه الساحل","central","transfer","ا/ عصام رمضان","1154456809"],["Gourmet","القاهرة","ديونز","central","transfer","ا/ عصام رمضان","1154456809"],["Gourmet","الإسكندرية","ديزينيا مول","central","transfer","ا/ ابراهيم","1126588836"]];
+const SKU_SEED = [
+ {id:'t330', n:'تنورين ٣٣٠ مل',      line:'PET', cs:12, pcv:410.40},
+ {id:'t500', n:'تنورين ٥٠٠ مل',      line:'PET', cs:12, pcv:478.80},
+ {id:'sport',n:'تنورين ٥٠٠ سبورت',   line:'PET', cs:12, pcv:547.20},
+ {id:'t15',  n:'تنورين ١.٥ لتر',     line:'PET', cs:6,  pcv:307.80},
+ {id:'vg330',n:'ڤيا زجاج ٣٣٠ مل',    line:'VIA', cs:12, pcv:998.64},
+ {id:'vg1',  n:'ڤيا زجاج ١ لتر',     line:'VIA', cs:6,  pcv:725.04},
+ {id:'vs330',n:'ڤيا سباركلينج ٣٣٠',  line:'VIA', cs:6,  pcv:513.00},
+ {id:'vs1',  n:'ڤيا سباركلينج ١ لتر',line:'VIA', cs:6,  pcv:743.85}
+];
+const REASONS=['المخزن فاضي','الفرع لم يطلب','أوردر متأخر','مساحة الرف'];
+const ROLE_NAMES={mgmt:'الإدارة',router:'الأوردرات',invoice:'الفواتير',finance:'المالية',org:'مشرف',rep:'منسق'};
+const DAY_LABELS={6:'السبت',0:'الأحد',1:'الاثنين',2:'الثلاثاء',3:'الأربعاء',4:'الخميس',5:'الجمعة'};
+const DAY_ORDER=[6,0,1,2,3,4,5];
+const PAY_LABEL={cheque:'شيك',transfer:'تحويل بنكي',unknown:'غير مسجلة'};
+const ORD_LABEL={rep:'أوردر مندوب',central:'أوردر مركزي (إيميل)',mixed:'إيميل أو مندوب'};
+
+let DB={outlets:null,skus:null,core:null,orders:null,invoices:null,collections:null,containers:null,fu:null,lastcheck:null,visitsToday:null};
+let SESSION=null, TAB=null;
+
+const $=id=>document.getElementById(id);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const todayISO=()=>new Date().toISOString().slice(0,10);
+const fmt=n=>Number(n||0).toLocaleString('en-US',{maximumFractionDigits:2});
+const daysSince=iso=>Math.floor((Date.now()-new Date(iso).getTime())/86400000);
+
+async function sget(k){try{const r=await window.storage.get(k,true);return r?JSON.parse(r.value):null}catch(e){return null}}
+async function sset(k,v){try{const r=await window.storage.set(k,JSON.stringify(v),true);if(!r)toast('خطأ في الحفظ — حاول تاني');return !!r}catch(e){toast('خطأ في الحفظ — حاول تاني');return false}}
+
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200)}
+
+async function ensureSeeds(){
+ let o=await sget('outlets');
+ if(!o){o=OUTLET_SEED.map((r,i)=>({i,chain:r[0],gov:r[1],name:r[2],ordering:r[3],pay:r[4],mgr:r[5],tel:r[6]}));await sset('outlets',o)}
+ DB.outlets=o;
+ let s=await sget('skus'); if(!s){s=SKU_SEED;await sset('skus',s)} DB.skus=s;
+ let c=await sget('core');
+ if(!c){c={users:[
+   {id:'u_mgmt',name:'الإدارة',role:'mgmt',pin:'1111',gov:'الكل'},
+   {id:'u_router',name:'مسؤول الأوردرات',role:'router',pin:'2222',gov:'الكل'},
+   {id:'u_inv',name:'مسؤول الفواتير',role:'invoice',pin:'3333',gov:'الكل'},
+   {id:'u_fin',name:'المالية',role:'finance',pin:'4444',gov:'الكل'}
+ ],routes:{}};await sset('core',c)}
+ DB.core=c;
+}
+async function loadOps(){
+ const [o,inv,col,cont,fu,lc,vt]=await Promise.all([
+  sget('orders'),sget('invoices'),sget('collections'),sget('containers'),sget('fu'),sget('lastcheck'),sget('v:'+todayISO())
+ ]);
+ DB.orders=o||[];DB.invoices=inv||[];DB.collections=col||[];DB.containers=cont||[];
+ DB.fu=fu||{};DB.lastcheck=lc||{};DB.visitsToday=vt||[];
+}
+async function refresh(){await loadOps();DB.core=await sget('core')||DB.core;DB.outlets=await sget('outlets')||DB.outlets;render();toast('تم التحديث')}
+
+/* helpers over data */
+const outlet=i=>DB.outlets.find(o=>o.i===i)||{name:'؟',chain:'',gov:''};
+const sku=id=>DB.skus.find(s=>s.id===id);
+const orderAmt=lines=>Object.entries(lines).reduce((a,[k,c])=>a+(sku(k)?sku(k).pcv*c:0),0);
+const invOpen=inv=>{const paid=DB.collections.filter(c=>c.inv===inv.id&&c.st!=='returned').reduce((a,c)=>a+c.amt,0);return Math.max(0,inv.amt-paid)};
+const userById=id=>DB.core.users.find(u=>u.id===id);
+
+/* ================= LOGIN ================= */
+function renderLogin(){
+ $('topbar').hidden=true;$('tabs').hidden=true;
+ const users=DB.core.users;
+ $('view').innerHTML=`<div class="login-wrap">
+  <div class="brand"><h1>تنورين مصر</h1><p>نظام التشغيل — نسخة تجريبية</p></div>
+  <div class="f"><label>المستخدم</label><select id="lu">${users.map(u=>`<option value="${u.id}">${u.name} — ${ROLE_NAMES[u.role]}</option>`).join('')}</select></div>
+  <div class="f"><label>الرقم السري</label><input id="lp" inputmode="numeric" type="password" placeholder="****"></div>
+  <p class="err" id="lerr" hidden></p>
+  <button class="send" id="lgo">دخول</button>
+  <p class="small" style="margin-top:14px;text-align:center">البيانات مشتركة بين كل مستخدمي النظام</p>
+ </div>`;
+ $('lgo').onclick=()=>{
+  const u=userById($('lu').value);
+  if(!u||u.pin!==$('lp').value.trim()){$('lerr').textContent='الرقم السري غلط';$('lerr').hidden=false;return}
+  SESSION=u;TAB=TABS[u.role][0].id;render();
+ };
+}
+
+/* ================= SHELL ================= */
+const TABS={
+ mgmt:[{id:'dash',n:'اللوحة'},{id:'stock',n:'المخزون'},{id:'team',n:'الفريق'},{id:'routes',n:'الخطوط'},{id:'outlets',n:'الفروع'}],
+ rep:[{id:'route',n:'خط اليوم'},{id:'chq',n:'الشيكات'},{id:'mylog',n:'سجلّي'}],
+ org:[{id:'feed',n:'المتابعة'},{id:'chq',n:'الشيكات'},{id:'fups',n:'تنبيهات'}],
+ router:[{id:'intake',n:'تسجيل وارد'},{id:'board',n:'الأوردرات'}],
+ invoice:[{id:'toinv',n:'للفوترة'},{id:'invs',n:'الفواتير'}],
+ finance:[{id:'chqb',n:'الشيكات'},{id:'trf',n:'التحويلات'},{id:'aging',n:'الأعمار'}]
+};
+function badgeCount(role,tab){
+ try{
+  if(role==='org'&&tab==='feed')return DB.visitsToday.filter(v=>v.st==='pending'&&inGov(v)).length;
+  if(role==='org'&&tab==='fups')return fupList().length;
+  if(role==='router'&&tab==='board')return DB.orders.filter(o=>o.st==='pending').length;
+  if(role==='invoice'&&tab==='toinv')return DB.orders.filter(o=>o.st==='approved').length;
+  if(role==='invoice'&&tab==='invs')return DB.invoices.filter(v=>v.st!=='delivered').length;
+  if(role==='finance'&&tab==='chqb')return DB.collections.filter(c=>c.type==='cheque'&&(c.st==='received'||c.st==='deposited')).length;
+ }catch(e){}
+ return 0;
+}
+function render(){
+ if(!SESSION){renderLogin();return}
+ $('topbar').hidden=false;$('tabs').hidden=false;
+ $('uwho').textContent=SESSION.name;
+ $('uttl').innerHTML=(TABS[SESSION.role].find(t=>t.id===TAB)||{}).n+`<span class="rolechip">${ROLE_NAMES[SESSION.role]}</span>`;
+ $('tabs').innerHTML=TABS[SESSION.role].map(t=>{
+   const b=badgeCount(SESSION.role,t.id);
+   return `<button class="${t.id===TAB?'on':''}" data-t="${t.id}">${t.n}${b?`<span class="badge">${b}</span>`:''}</button>`;
+ }).join('');
+ $('tabs').querySelectorAll('button').forEach(b=>b.onclick=()=>{TAB=b.dataset.t;render()});
+ VIEWS[SESSION.role][TAB]();
+}
+$('logoutBtn').onclick=()=>{SESSION=null;render()};
+$('refreshBtn').onclick=refresh;
+
+/* ================= SHARED WIDGETS ================= */
+function stepperHTML(key,val){return `<div class="step" data-k="${key}">
+ <button type="button" data-d="-1">−</button>
+ <input inputmode="numeric" value="${val===null||val===undefined?'':val}" placeholder="—">
+ <button type="button" data-d="1">+</button></div>`}
+function wireSteppers(root,state,onZeroToggle){
+ root.querySelectorAll('.step').forEach(st=>{
+  const k=st.dataset.k,inp=st.querySelector('input');
+  const set=v=>{state[k]=v;inp.value=v===null?'':v;inp.classList.toggle('zero',v===0);if(onZeroToggle)onZeroToggle(k,v)};
+  st.querySelectorAll('button').forEach(b=>b.onclick=()=>set(Math.max(0,(state[k]??0)+ +b.dataset.d)));
+  inp.oninput=()=>{const v=inp.value.replace(/\D/g,'');set(v===''?null:+v)};
+ });
+}
+function photoInput(btnId,cb){
+ const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.capture='environment';
+ inp.onchange=()=>{
+  const f=inp.files[0];if(!f)return;
+  const img=new Image();img.onload=()=>{
+   const c=document.createElement('canvas');const sc=Math.min(1,560/Math.max(img.width,img.height));
+   c.width=img.width*sc;c.height=img.height*sc;
+   c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+   cb(c.toDataURL('image/jpeg',0.55));
+  };img.src=URL.createObjectURL(f);
+ };
+ $(btnId).onclick=()=>inp.click();
+}
+
+/* ================= REP ================= */
+function repRouteToday(){
+ const r=(DB.core.routes[SESSION.id]||{})[new Date().getDay()]||[];
+ return r.filter(i=>outlet(i));
+}
+const VIEWS={rep:{},org:{},router:{},invoice:{},finance:{},mgmt:{}};
+
+VIEWS.rep.route=function(){
+ const route=repRouteToday();
+ const doneIdx=DB.visitsToday.filter(v=>v.rep===SESSION.id).map(v=>v.o);
+ let html=`<div class="stat">
+   <div class="good"><b>${doneIdx.length}</b><span>زيارات اليوم</span></div>
+   <div><b>${route.filter(i=>!doneIdx.includes(i)).length}</b><span>باقي بالخط</span></div>
+ </div>`;
+ if(route.length===0) html+=`<p class="hint">لا يوجد خط سير لليوم — كلم المشرف أو سجّل زيارة خارج الخط.</p>`;
+ html+=route.map(i=>{const o=outlet(i);const d=doneIdx.includes(i);
+  return `<button class="rowbtn ${d?'ok':''}" data-i="${i}">
+   <span><span class="nm">${o.name}</span><span class="sub">${o.chain} · ${o.gov}${o.ordering!=='rep'?' · أوردر مركزي':''}</span></span>
+   ${d?'<span class="pill g">تمت</span>':''}</button>`}).join('');
+ html+=`<button class="ghost" id="offroute">＋ زيارة خارج الخط</button>`;
+ $('view').innerHTML=html;
+ $('view').querySelectorAll('.rowbtn').forEach(b=>b.onclick=()=>repOutlet(+b.dataset.i));
+ $('offroute').onclick=()=>repPickOutlet();
+};
+function repPickOutlet(){
+ $('view').innerHTML=`<div class="f"><label>ابحث عن الفرع</label><input id="q" placeholder="اسم الفرع أو السلسلة"></div><div id="res"></div>`;
+ const draw=q=>{
+  const list=DB.outlets.filter(o=>(o.name+o.chain).includes(q)).slice(0,25);
+  $('res').innerHTML=list.map(o=>`<button class="rowbtn" data-i="${o.i}"><span><span class="nm">${o.name}</span><span class="sub">${o.chain} · ${o.gov}</span></span></button>`).join('')||'<p class="empty">لا نتائج</p>';
+  $('res').querySelectorAll('.rowbtn').forEach(b=>b.onclick=()=>repOutlet(+b.dataset.i));
+ };
+ $('q').oninput=e=>draw(e.target.value.trim());draw('');
+}
+function repOutlet(i){
+ const o=outlet(i);
+ const canOrder=o.ordering!=='central';
+ $('view').innerHTML=`<p class="hint"><b>${o.name}</b> — ${o.chain}${o.ordering==='central'?'<br><span class="pill v">الأوردر مركزي — جرد فقط، النواقص تروح متابعة للسلسلة</span>':''}</p>
+  <button class="rowbtn" id="goCheck"><span><span class="nm">جرد البضاعة</span><span class="sub">رف · مخزن · بيع لكل صنف (تنورين + ڤيا)</span></span></button>
+  ${canOrder?`<button class="rowbtn" id="goOrder"><span><span class="nm">عمل أوردر</span><span class="sub">طلب كميات — يوصل لمسؤول الأوردرات</span></span></button>`:''}`;
+ $('goCheck').onclick=()=>repForm(i,'check');
+ if(canOrder)$('goOrder').onclick=()=>repForm(i,'order');
+}
+function repForm(i,mode){
+ const o=outlet(i);const state={};let photo=null;
+ let html=`<p class="hint"><b>${o.name}</b> — ${mode==='order'?'الكميات بالكرتونة':'اكتب صفر لو مفيش — ممنوع خانة فاضية'}</p>`;
+ html+=DB.skus.map(s=>{
+  if(mode==='order'){state['o_'+s.id]=0;
+   return `<div class="sku"><h3>${s.n}<span class="tag">${s.line==='VIA'?'ڤيا':''}</span></h3>
+    <div class="fields" style="grid-template-columns:1fr"><div class="fcell"><label>الكمية (كرتونة ${s.cs})</label>${stepperHTML('o_'+s.id,0)}</div></div></div>`}
+  state['sh_'+s.id]=null;state['wh_'+s.id]=null;state['so_'+s.id]=null;state['why_'+s.id]=null;
+  return `<div class="sku"><h3>${s.n}<span class="tag">${s.line==='VIA'?'ڤيا':''}</span></h3>
+   <div class="fields">
+    <div class="fcell"><label>رف <em>*</em></label>${stepperHTML('sh_'+s.id,null)}</div>
+    <div class="fcell"><label>مخزن <em>*</em></label>${stepperHTML('wh_'+s.id,null)}</div>
+    <div class="fcell" style="grid-column:1/-1"><label>بيع من آخر زيارة (كرتونة) <em>*</em></label>${stepperHTML('so_'+s.id,null)}</div>
+   </div>
+   <div class="reason" id="r_${s.id}" hidden><p>الرف صفر — حدد السبب</p>
+    <div class="chips">${REASONS.map(r=>`<button type="button" data-s="${s.id}" data-r="${r}" aria-pressed="false">${r}</button>`).join('')}</div>
+   </div></div>`;
+ }).join('');
+ if(mode==='check')html+=`<img class="thumb" id="thumb" hidden><button class="photo" id="ph">📷 صورة الرف (مطلوبة)</button>`;
+ html+=`<p class="err" id="ferr" hidden></p><button class="send" id="fsend">إرسال</button>`;
+ $('view').innerHTML=html;
+ wireSteppers($('view'),state,(k,v)=>{
+  if(k.startsWith('sh_')){const s=k.slice(3);const r=$('r_'+s);if(r){r.hidden=(v!==0);
+   if(v!==0){state['why_'+s]=null;r.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed','false'))}}}
+ });
+ $('view').querySelectorAll('.reason button').forEach(b=>b.onclick=()=>{
+  b.closest('.chips').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed','false'));
+  b.setAttribute('aria-pressed','true');state['why_'+b.dataset.s]=b.dataset.r;
+ });
+ if(mode==='check')photoInput('ph',d=>{photo=d;$('ph').classList.add('on');$('ph').textContent='✓ تم إرفاق الصورة';$('thumb').src=d;$('thumb').hidden=false});
+ $('fsend').onclick=async()=>{
+  const errEl=$('ferr');
+  if(mode==='check'){
+   for(const s of DB.skus){
+    if(state['sh_'+s.id]===null||state['wh_'+s.id]===null||state['so_'+s.id]===null){errEl.textContent='في خانات فاضية — اكتب صفر لو مفيش';errEl.hidden=false;return}
+    if(state['sh_'+s.id]===0&&!state['why_'+s.id]){errEl.textContent='حدد سبب الصفر لكل صنف ناقص';errEl.hidden=false;return}
+   }
+   if(!photo){errEl.textContent='صورة الرف مطلوبة';errEl.hidden=false;return}
+   const lines=DB.skus.map(s=>({sku:s.id,sh:state['sh_'+s.id],wh:state['wh_'+s.id],so:state['so_'+s.id],why:state['why_'+s.id]}));
+   const zeros=lines.filter(l=>l.sh===0).map(l=>l.sku);
+   const v={id:uid(),rep:SESSION.id,o:i,ts:Date.now(),mode:'check',lines,photo,st:'pending'};
+   const key='v:'+todayISO();const cur=await sget(key)||[];cur.push(v);
+   if(!await sset(key,cur))return;
+   const lc=await sget('lastcheck')||{};lc[i]={d:todayISO(),zeros,rep:SESSION.id};await sset('lastcheck',lc);
+   DB.visitsToday=cur;DB.lastcheck=lc;
+   toast(zeros.length?`اتسجل ${zeros.length} صنف ناقص — المشرف هيشوفهم`:'تم — كل الأصناف متوفرة');
+   TAB='route';render();
+  }else{
+   const lines={};DB.skus.forEach(s=>{if(state['o_'+s.id]>0)lines[s.id]=state['o_'+s.id]});
+   if(Object.keys(lines).length===0){errEl.textContent='اكتب كمية لصنف واحد على الأقل';errEl.hidden=false;return}
+   const ord={id:uid(),o:i,src:'rep',po:'',d:todayISO(),lines,st:'pending',by:SESSION.id,ts:Date.now()};
+   const cur=await sget('orders')||[];cur.push(ord);
+   if(!await sset('orders',cur))return;
+   DB.orders=cur;toast('الأوردر وصل لمسؤول الأوردرات');TAB='route';render();
+  }
+ };
+}
+VIEWS.rep.mylog=function(){
+ const mine=DB.visitsToday.filter(v=>v.rep===SESSION.id);
+ $('view').innerHTML=`<p class="hint">نشاطي اليوم</p>`+(mine.map(v=>{
+  const o=outlet(v.o);const z=v.lines?v.lines.filter(l=>l.sh===0).length:0;
+  return `<div class="card feeditem ${v.st==='approved'?'ok':v.st==='flagged'?'bad':'pend'}">
+   <b>${o.name}</b> <span class="small">${new Date(v.ts).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}</span><br>
+   <span class="small">${z?z+' صنف صفر · ':''}${v.st==='approved'?'اعتمدها المشرف':v.st==='flagged'?'مرفوضة — راجع المشرف':'في انتظار الاعتماد'}</span></div>`;
+ }).join('')||'<p class="empty">لسه مفيش زيارات النهارده</p>');
+};
+
+/* ================= ORGANIZER ================= */
+function inGov(v){return SESSION.gov==='الكل'||outlet(v.o).gov===SESSION.gov}
+VIEWS.org.feed=function(){
+ const vs=DB.visitsToday.filter(inGov).sort((a,b)=>b.ts-a.ts);
+ const reps=DB.core.users.filter(u=>u.role==='rep'&&(SESSION.gov==='الكل'||u.gov===SESSION.gov));
+ const silent=reps.filter(u=>((DB.core.routes[u.id]||{})[new Date().getDay()]||[]).length>0&&!vs.some(v=>v.rep===u.id));
+ let html='';
+ if(silent.length)html+=`<div class="card" style="border-right:4px solid var(--crit)"><b>لسه مفيش زيارات من:</b><br><span class="small">${silent.map(u=>u.name).join(' · ')}</span></div>`;
+ html+=vs.map(v=>{
+  const o=outlet(v.o);const u=userById(v.rep)||{name:'؟'};
+  const z=v.lines?v.lines.filter(l=>l.sh===0):[];
+  return `<div class="card feeditem ${v.st==='approved'?'ok':v.st==='flagged'?'bad':'pend'}">
+   <b>${o.name}</b> <span class="small">— ${u.name} · ${new Date(v.ts).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}</span>
+   ${z.length?`<br><span class="pill r">${z.length} صنف صفر</span> <span class="small">${z.map(l=>sku(l.sku).n).join('، ')}</span>`:'<br><span class="pill g">متوفر</span>'}
+   ${v.photo?`<img class="thumb" src="${v.photo}" style="margin-top:8px">`:''}
+   ${v.st==='pending'?`<div class="btnrow"><button class="mini grn" data-a="approved" data-id="${v.id}">اعتماد</button><button class="mini red" data-a="flagged" data-id="${v.id}">رفض</button></div>`:''}
+  </div>`;
+ }).join('')||'<p class="empty">مفيش زيارات النهارده</p>';
+ $('view').innerHTML=html;
+ $('view').querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{
+  const key='v:'+todayISO();const cur=await sget(key)||[];
+  const v=cur.find(x=>x.id===b.dataset.id);if(v){v.st=b.dataset.a;v.orgBy=SESSION.id;
+   if(await sset(key,cur)){DB.visitsToday=cur;render()}}
+ });
+};
+VIEWS.org.chq=function(){
+ const chOutlets=DB.outlets.filter(o=>o.pay!=='transfer');
+ $('view').innerHTML=`<p class="hint">تسجيل استلام شيك من فرع</p>
+  <div class="f"><label>الفرع</label><select id="co"><option value="">— اختر —</option>${chOutlets.map(o=>`<option value="${o.i}">${o.chain} — ${o.name}</option>`).join('')}</select></div>
+  <div id="cinv"></div>`;
+ $('co').onchange=()=>{
+  const i=+$('co').value;if(isNaN(i)){$('cinv').innerHTML='';return}
+  const invs=DB.invoices.filter(v=>v.o===i&&v.st==='delivered'&&invOpen(v)>0);
+  $('cinv').innerHTML=invs.length?invs.map(v=>`
+   <div class="card"><b>فاتورة ${v.id.slice(-5)}</b> — ${v.d} · مفتوح: <b>${fmt(invOpen(v))}</b> ج
+    <div class="f" style="margin-top:8px"><label>مبلغ الشيك</label><input inputmode="decimal" id="amt_${v.id}" value="${invOpen(v)}"></div>
+    <div class="f"><label>تاريخ الشيك</label><input type="date" id="cd_${v.id}"></div>
+    <button class="mini dark" data-inv="${v.id}">استلمت الشيك</button></div>`).join('')
+  :'<p class="empty">لا فواتير مفتوحة مسلَّمة لهذا الفرع</p>';
+  $('cinv').querySelectorAll('[data-inv]').forEach(b=>b.onclick=async()=>{
+   const invId=b.dataset.inv;const amt=parseFloat($('amt_'+invId).value);const cd=$('cd_'+invId).value;
+   if(!amt||amt<=0){toast('اكتب مبلغ صحيح');return}
+   if(!cd){toast('تاريخ الشيك مطلوب');return}
+   const inv=DB.invoices.find(v=>v.id===invId);
+   const col={id:uid(),inv:invId,o:inv.o,type:'cheque',amt,cd,st:'received',by:SESSION.id,ts:Date.now()};
+   const cur=await sget('collections')||[];cur.push(col);
+   if(await sset('collections',cur)){DB.collections=cur;toast('اتسجل — الشيك في عهدتك لحد ما يوصل المالية');render()}
+  });
+ };
+};
+function fupList(){
+ return Object.entries(DB.lastcheck)
+  .filter(([i,d])=>d.zeros&&d.zeros.length&&outlet(+i).ordering!=='rep'&&!DB.fu[i+'_'+d.d])
+  .map(([i,d])=>({i:+i,...d}));
+}
+VIEWS.org.fups=function(){
+ const list=fupList();
+ $('view').innerHTML=`<p class="hint">فروع أوردرها مركزي وعندها نواقص — لازم متابعة مع مشتري السلسلة</p>`+
+ (list.map(f=>{const o=outlet(f.i);
+  return `<div class="card feeditem bad"><b>${o.name}</b> — ${o.chain}<br>
+   <span class="small">آخر جرد ${f.d}: ${f.zeros.map(s=>sku(s).n).join('، ')}</span>
+   <div class="btnrow"><button class="mini dark" data-i="${f.i}" data-d="${f.d}">تم التواصل مع السلسلة</button></div></div>`;
+ }).join('')||'<p class="empty">مفيش متابعات مطلوبة</p>');
+ $('view').querySelectorAll('[data-i]').forEach(b=>b.onclick=async()=>{
+  const fu=await sget('fu')||{};fu[b.dataset.i+'_'+b.dataset.d]={by:SESSION.id,ts:Date.now()};
+  if(await sset('fu',fu)){DB.fu=fu;render();toast('اتسجلت المتابعة')}
+ });
+};
+
+VIEWS.rep.chq=function(){VIEWS.org.chq()};
+
+/* ================= ROUTER (Aly) ================= */
+VIEWS.router.intake=function(){
+ $('view').innerHTML=`<p class="hint">تسجيل أوردر وارد بالإيميل (أو تليفون)</p>
+  <div class="f"><label>الفرع</label><select id="io"><option value="">— اختر —</option>${DB.outlets.filter(o=>o.ordering!=='rep').map(o=>`<option value="${o.i}">${o.chain} — ${o.name}</option>`).join('')}<optgroup label="فروع أوردر مندوب (استثناء)">${DB.outlets.filter(o=>o.ordering==='rep').map(o=>`<option value="${o.i}">${o.chain} — ${o.name}</option>`).join('')}</optgroup></select></div>
+  <div class="f"><label>رقم الـ PO (لو موجود)</label><input id="ipo" placeholder="مثال: GO-4412"></div>
+  <div id="ilines">${DB.skus.map(s=>`<div class="sku"><h3>${s.n}</h3><div class="fields" style="grid-template-columns:1fr"><div class="fcell"><label>كرتونة (${s.cs})</label>${stepperHTML('q_'+s.id,0)}</div></div></div>`).join('')}</div>
+  <p class="err" id="ierr" hidden></p><button class="send" id="isend">تسجيل الأوردر</button>`;
+ const state={};DB.skus.forEach(s=>state['q_'+s.id]=0);
+ wireSteppers($('view'),state);
+ $('isend').onclick=async()=>{
+  const i=+$('io').value;
+  if(isNaN(i)){$('ierr').textContent='اختر الفرع';$('ierr').hidden=false;return}
+  const lines={};DB.skus.forEach(s=>{if(state['q_'+s.id]>0)lines[s.id]=state['q_'+s.id]});
+  if(!Object.keys(lines).length){$('ierr').textContent='اكتب كمية لصنف واحد على الأقل';$('ierr').hidden=false;return}
+  const ord={id:uid(),o:i,src:'email',po:$('ipo').value.trim(),d:todayISO(),lines,st:'pending',by:SESSION.id,ts:Date.now()};
+  const cur=await sget('orders')||[];cur.push(ord);
+  if(await sset('orders',cur)){DB.orders=cur;toast('اتسجل الأوردر');render()}
+ };
+};
+VIEWS.router.board=function(){
+ const pend=DB.orders.filter(o=>o.st==='pending').sort((a,b)=>b.ts-a.ts);
+ const appr=DB.orders.filter(o=>o.st==='approved').sort((a,b)=>b.ts-a.ts);
+ const lineTxt=o=>Object.entries(o.lines).map(([k,c])=>`${sku(k).n}: ${c}`).join(' · ');
+ $('view').innerHTML=`<div class="sect">في انتظار الاعتماد (${pend.length})</div>`+
+ (pend.map(o=>{const ot=outlet(o.o);
+  return `<div class="card feeditem pend"><b>${ot.name}</b> — ${ot.chain}
+   <span class="pill ${o.src==='email'?'v':'n'}">${o.src==='email'?'إيميل'+(o.po?' · '+o.po:''):'مندوب'}</span><br>
+   <span class="small">${lineTxt(o)} — <b>${fmt(orderAmt(o.lines))} ج</b></span>
+   <div class="btnrow"><button class="mini grn" data-a="approved" data-id="${o.id}">اعتماد</button>
+   <button class="mini red" data-a="rejected" data-id="${o.id}">رفض</button></div></div>`;
+ }).join('')||'<p class="empty">مفيش أوردرات معلقة</p>')+
+ `<div class="sect">معتمد — عند الفواتير (${appr.length})</div>`+
+ (appr.map(o=>{const ot=outlet(o.o);return `<div class="card feeditem ok"><b>${ot.name}</b><br><span class="small">${lineTxt(o)}</span></div>`}).join('')||'<p class="empty">—</p>');
+ $('view').querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{
+  const cur=await sget('orders')||[];const o=cur.find(x=>x.id===b.dataset.id);
+  if(o){o.st=b.dataset.a;o.decBy=SESSION.id;if(await sset('orders',cur)){DB.orders=cur;render()}}
+ });
+};
+
+/* ================= INVOICE (Amr) ================= */
+VIEWS.invoice.toinv=function(){
+ const appr=DB.orders.filter(o=>o.st==='approved').sort((a,b)=>a.ts-b.ts);
+ $('view').innerHTML=`<p class="hint">أوردرات معتمدة — أنشئ الفاتورة وبها تخرج البضاعة من المخزن</p>`+
+ (appr.map(o=>{const ot=outlet(o.o);
+  return `<div class="card"><b>${ot.name}</b> — ${ot.chain} <span class="small">${o.d}${o.po?' · '+o.po:''}</span><br>
+   <span class="small">${Object.entries(o.lines).map(([k,c])=>`${sku(k).n}: ${c}`).join(' · ')}</span><br>
+   <b>${fmt(orderAmt(o.lines))} ج</b> <span class="small">شامل الضريبة</span>
+   <div class="btnrow"><button class="mini dark" data-id="${o.id}">إنشاء فاتورة</button></div></div>`;
+ }).join('')||'<p class="empty">مفيش أوردرات جاهزة للفوترة</p>');
+ $('view').querySelectorAll('[data-id]').forEach(b=>b.onclick=async()=>{
+  const ords=await sget('orders')||[];const o=ords.find(x=>x.id===b.dataset.id);
+  if(!o||o.st!=='approved')return;
+  o.st='invoiced';
+  const inv={id:uid(),ord:o.id,o:o.o,d:todayISO(),lines:o.lines,amt:orderAmt(o.lines),st:'created',pod:false,ts:Date.now()};
+  const invs=await sget('invoices')||[];invs.push(inv);
+  if(await sset('orders',ords)&&await sset('invoices',invs)){DB.orders=ords;DB.invoices=invs;toast('اتعملت الفاتورة — البضاعة تخرج بيها');render()}
+ });
+};
+VIEWS.invoice.invs=function(){
+ const act=DB.invoices.filter(v=>v.st!=='delivered').sort((a,b)=>b.ts-a.ts);
+ const done=DB.invoices.filter(v=>v.st==='delivered').sort((a,b)=>b.ts-a.ts).slice(0,10);
+ const card=v=>{const ot=outlet(v.o);
+  return `<div class="card feeditem ${v.st==='delivered'?'ok':v.st==='dispatched'?'pend':''}">
+   <b>${ot.name}</b> — فاتورة ${v.id.slice(-5)} · ${v.d}<br><b>${fmt(v.amt)} ج</b>
+   <span class="pill ${v.st==='created'?'n':v.st==='dispatched'?'y':'g'}">${v.st==='created'?'اتعملت':v.st==='dispatched'?'خرجت مع العربية':'اتسلّمت'}</span>
+   <div class="btnrow">
+    ${v.st==='created'?`<button class="mini dark" data-a="dispatched" data-id="${v.id}">خرجت من المخزن</button>`:''}
+    ${v.st==='dispatched'?`<button class="mini grn" data-a="delivered" data-id="${v.id}">تسليم + صورة الإذن</button>`:''}
+   </div></div>`};
+ $('view').innerHTML=`<div class="sect">فواتير شغالة (${act.length})</div>`+(act.map(card).join('')||'<p class="empty">—</p>')+
+  `<div class="sect">آخر المسلَّم</div>`+(done.map(card).join('')||'<p class="empty">—</p>');
+ $('view').querySelectorAll('[data-a]').forEach(b=>{
+  b.onclick=async()=>{
+   const a=b.dataset.a,id=b.dataset.id;
+   if(a==='delivered'){
+    const inp=document.createElement('input');inp.type='file';inp.accept='image/*';inp.capture='environment';
+    inp.onchange=()=>{const f=inp.files[0];if(!f){return}
+     const img=new Image();img.onload=async()=>{
+      const c=document.createElement('canvas');const sc=Math.min(1,560/Math.max(img.width,img.height));
+      c.width=img.width*sc;c.height=img.height*sc;c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      const data=c.toDataURL('image/jpeg',0.55);
+      const invs=await sget('invoices')||[];const v=invs.find(x=>x.id===id);
+      if(v){v.st='delivered';v.pod=true;v.ddts=Date.now();
+       await sset('pod:'+id,data);
+       if(await sset('invoices',invs)){DB.invoices=invs;toast('اتسجل التسليم بإذن موقّع');render()}}
+     };img.src=URL.createObjectURL(f);
+    };inp.click();
+   }else{
+    const invs=await sget('invoices')||[];const v=invs.find(x=>x.id===id);
+    if(v){v.st='dispatched';v.dts=Date.now();if(await sset('invoices',invs)){DB.invoices=invs;render()}}
+   }
+  };
+ });
+};
+
+/* ================= FINANCE (Salma) ================= */
+VIEWS.finance.chqb=function(){
+ const chq=DB.collections.filter(c=>c.type==='cheque').sort((a,b)=>b.ts-a.ts);
+ const grp={received:[],deposited:[],cleared:[],returned:[]};
+ chq.forEach(c=>grp[c.st]&&grp[c.st].push(c));
+ const card=(c,acts)=>{const ot=outlet(c.o);const by=userById(c.by)||{name:'؟'};
+  return `<div class="card"><b>${ot.name}</b> — ${fmt(c.amt)} ج<br>
+   <span class="small">تاريخ الشيك ${c.cd} · استلمه ${by.name} من ${daysSince(new Date(c.ts).toISOString())} يوم</span>
+   <div class="btnrow">${acts}</div></div>`};
+ $('view').innerHTML=
+  `<div class="sect">في العهدة — لسه ما اتودعش (${grp.received.length})</div>`+
+  (grp.received.map(c=>card(c,`<button class="mini dark" data-a="deposited" data-id="${c.id}">اتودع البنك</button>`)).join('')||'<p class="empty">—</p>')+
+  `<div class="sect">مودع — في انتظار التحصيل (${grp.deposited.length})</div>`+
+  (grp.deposited.map(c=>card(c,`<button class="mini grn" data-a="cleared" data-id="${c.id}">تحصّل</button><button class="mini red" data-a="returned" data-id="${c.id}">مرتد</button>`)).join('')||'<p class="empty">—</p>')+
+  `<div class="sect">مرتد (${grp.returned.length})</div>`+
+  (grp.returned.map(c=>card(c,'')).join('')||'<p class="empty">—</p>');
+ $('view').querySelectorAll('[data-a]').forEach(b=>b.onclick=async()=>{
+  const cur=await sget('collections')||[];const c=cur.find(x=>x.id===b.dataset.id);
+  if(c){c.st=b.dataset.a;c['t_'+b.dataset.a]=Date.now();
+   if(await sset('collections',cur)){DB.collections=cur;render();if(b.dataset.a==='returned')toast('اتسجل الارتداد — الفاتورة رجعت مفتوحة')}}
+ });
+};
+VIEWS.finance.trf=function(){
+ const list=DB.invoices.filter(v=>v.st==='delivered'&&outlet(v.o).pay==='transfer'&&invOpen(v)>0).sort((a,b)=>a.ts-b.ts);
+ $('view').innerHTML=`<p class="hint">فواتير التحويل البنكي (جورميه) المفتوحة — سجّلي التحويل عند وصوله</p>`+
+ (list.map(v=>{const ot=outlet(v.o);
+  return `<div class="card"><b>${ot.name}</b> — فاتورة ${v.id.slice(-5)} · ${v.d} · عمرها ${daysSince(v.d)} يوم<br>
+   مفتوح: <b>${fmt(invOpen(v))} ج</b>
+   <div class="f" style="margin-top:8px"><label>مبلغ التحويل</label><input inputmode="decimal" id="ta_${v.id}" value="${invOpen(v)}"></div>
+   <div class="btnrow"><button class="mini grn" data-id="${v.id}">وصل التحويل</button></div></div>`;
+ }).join('')||'<p class="empty">مفيش فواتير تحويل مفتوحة</p>');
+ $('view').querySelectorAll('[data-id]').forEach(b=>b.onclick=async()=>{
+  const id=b.dataset.id;const amt=parseFloat($('ta_'+id).value);
+  if(!amt||amt<=0){toast('اكتب مبلغ صحيح');return}
+  const inv=DB.invoices.find(v=>v.id===id);
+  const col={id:uid(),inv:id,o:inv.o,type:'transfer',amt,cd:todayISO(),st:'cleared',by:SESSION.id,ts:Date.now()};
+  const cur=await sget('collections')||[];cur.push(col);
+  if(await sset('collections',cur)){DB.collections=cur;toast('اتسجل التحويل');render()}
+ });
+};
+VIEWS.finance.aging=function(){
+ const open=DB.invoices.filter(v=>invOpen(v)>0);
+ const buckets={'0-30':0,'31-60':0,'61-90':0,'+90':0};
+ const byChain={};
+ open.forEach(v=>{
+  const age=daysSince(v.d);const amt=invOpen(v);
+  const b=age<=30?'0-30':age<=60?'31-60':age<=90?'61-90':'+90';
+  buckets[b]+=amt;
+  const ch=outlet(v.o).chain;byChain[ch]=byChain[ch]||{n:0,amt:0,old:0};
+  byChain[ch].n++;byChain[ch].amt+=amt;if(age>60)byChain[ch].old+=amt;
+ });
+ const custody=DB.collections.filter(c=>c.type==='cheque'&&c.st==='received');
+ $('view').innerHTML=`
+  <div class="stat">
+   <div><b>${fmt(Object.values(buckets).reduce((a,b)=>a+b,0))}</b><span>إجمالي مفتوح (ج)</span></div>
+   <div class="w"><b>${custody.length}</b><span>شيكات بالعهدة</span></div>
+   <div class="bad"><b>${fmt(buckets['+90'])}</b><span>فوق ٩٠ يوم (ج)</span></div>
+  </div>
+  <div class="sect">أعمار المديونية</div>
+  <table class="t"><tr><th>الفترة</th><th>المبلغ (ج)</th></tr>
+  ${Object.entries(buckets).map(([k,v])=>`<tr><td>${k} يوم</td><td class="mono">${fmt(v)}</td></tr>`).join('')}</table>
+  <div class="sect">حسب السلسلة</div>
+  <table class="t"><tr><th>السلسلة</th><th>فواتير</th><th>مفتوح (ج)</th><th>فوق ٦٠ يوم</th></tr>
+  ${Object.entries(byChain).sort((a,b)=>b[1].amt-a[1].amt).map(([ch,d])=>`<tr><td>${ch}</td><td class="mono">${d.n}</td><td class="mono">${fmt(d.amt)}</td><td class="mono" style="color:${d.old?'var(--crit)':'inherit'}">${fmt(d.old)}</td></tr>`).join('')}</table>`;
+};
+
+/* ================= MANAGEMENT ================= */
+VIEWS.mgmt.dash=function(){
+ const vs=DB.visitsToday;
+ const zeros=vs.reduce((a,v)=>a+(v.lines?v.lines.filter(l=>l.sh===0).length:0),0);
+ const reps=DB.core.users.filter(u=>u.role==='rep');
+ const silent=reps.filter(u=>((DB.core.routes[u.id]||{})[new Date().getDay()]||[]).length>0&&!vs.some(v=>v.rep===u.id));
+ const pendOrd=DB.orders.filter(o=>o.st==='pending').length;
+ const undel=DB.invoices.filter(v=>v.st!=='delivered').length;
+ const custody=DB.collections.filter(c=>c.type==='cheque'&&c.st==='received');
+ const openTot=DB.invoices.reduce((a,v)=>a+invOpen(v),0);
+ $('view').innerHTML=`
+  <div class="stat">
+   <div class="good"><b>${vs.length}</b><span>زيارات اليوم</span></div>
+   <div class="${silent.length?'bad':''}"><b>${silent.length}</b><span>مندوبين صامتين</span></div>
+   <div class="${zeros?'bad':''}"><b>${zeros}</b><span>أصناف صفر اليوم</span></div>
+   <div class="${pendOrd?'w':''}"><b>${pendOrd}</b><span>أوردرات معلقة</span></div>
+   <div class="${undel?'w':''}"><b>${undel}</b><span>فواتير لم تُسلَّم</span></div>
+   <div class="${custody.length?'w':''}"><b>${custody.length}</b><span>شيكات بالعهدة</span></div>
+  </div>
+  <div class="card"><span class="small">إجمالي المستحقات المفتوحة</span><br><b style="font-size:22px;font-family:'IBM Plex Mono',monospace">${fmt(openTot)} ج</b></div>
+  ${silent.length?`<div class="card feeditem bad"><b>بدون زيارات اليوم:</b><br><span class="small">${silent.map(u=>u.name).join(' · ')}</span></div>`:''}
+  <div class="sect">آخر النشاط</div>
+  ${vs.slice(-6).reverse().map(v=>{const o=outlet(v.o);const u=userById(v.rep)||{name:'؟'};
+   return `<div class="card"><span class="small">${new Date(v.ts).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'})}</span> — <b>${u.name}</b> زار ${o.name}</div>`}).join('')||'<p class="empty">مفيش نشاط لسه</p>'}`;
+};
+VIEWS.mgmt.stock=function(){
+ const out={};DB.skus.forEach(s=>out[s.id]=0);
+ DB.invoices.forEach(v=>Object.entries(v.lines).forEach(([k,c])=>{if(out[k]!==undefined)out[k]+=c}));
+ const inn={};DB.skus.forEach(s=>inn[s.id]=0);
+ DB.containers.forEach(ct=>Object.entries(ct.lines).forEach(([k,c])=>{if(inn[k]!==undefined)inn[k]+=c}));
+ $('view').innerHTML=`
+  <div class="sect">رصيد الدفاتر (كرتونة) — وارد الحاويات ناقص المفوتر</div>
+  <table class="t"><tr><th>الصنف</th><th>وارد</th><th>خرج</th><th>الرصيد</th></tr>
+  ${DB.skus.map(s=>{const bal=inn[s.id]-out[s.id];
+   return `<tr><td>${s.n}</td><td class="mono">${inn[s.id]}</td><td class="mono">${out[s.id]}</td><td class="mono" style="color:${bal<=0?'var(--crit)':'inherit'}">${bal}</td></tr>`}).join('')}</table>
+  <p class="small">الرصيد دفتري — قارنه بالجرد الفعلي دوريًا. أي فرق = تسرب أو خطأ تسجيل.</p>
+  <div class="sect">تسجيل وصول حاوية</div>
+  <div id="clines">${DB.skus.map(s=>`<div class="sku"><h3>${s.n}</h3><div class="fields" style="grid-template-columns:1fr"><div class="fcell"><label>كرتونة</label>${stepperHTML('c_'+s.id,0)}</div></div></div>`).join('')}</div>
+  <button class="send" id="csend">تسجيل الحاوية</button>
+  <div class="sect">حاويات سابقة</div>
+  ${DB.containers.slice(-5).reverse().map(c=>`<div class="card"><b>${c.d}</b> — ${Object.entries(c.lines).map(([k,n])=>sku(k).n+': '+n).join(' · ')}</div>`).join('')||'<p class="empty">لسه مفيش حاويات مسجلة</p>'}`;
+ const state={};DB.skus.forEach(s=>state['c_'+s.id]=0);
+ wireSteppers($('view'),state);
+ $('csend').onclick=async()=>{
+  const lines={};DB.skus.forEach(s=>{if(state['c_'+s.id]>0)lines[s.id]=state['c_'+s.id]});
+  if(!Object.keys(lines).length){toast('اكتب كميات الحاوية');return}
+  const cur=await sget('containers')||[];cur.push({id:uid(),d:todayISO(),lines,by:SESSION.id});
+  if(await sset('containers',cur)){DB.containers=cur;toast('اتسجلت الحاوية');render()}
+ };
+};
+VIEWS.mgmt.team=function(){
+ $('view').innerHTML=`
+  <div class="sect">إضافة مستخدم</div>
+  <div class="f"><label>الاسم</label><input id="nn"></div>
+  <div class="f"><label>الدور</label><select id="nr"><option value="rep">منسق (ميدان)</option><option value="org">مشرف</option><option value="router">الأوردرات</option><option value="invoice">الفواتير</option><option value="finance">المالية</option><option value="mgmt">إدارة</option></select></div>
+  <div class="f"><label>المحافظة</label><select id="ng"><option>القاهرة</option><option>الإسكندرية</option><option>الكل</option></select></div>
+  <div class="f"><label>رقم سري (٤ أرقام)</label><input id="np" inputmode="numeric" maxlength="4"></div>
+  <button class="send" id="nadd">إضافة</button>
+  <div class="sect">المستخدمون (${DB.core.users.length})</div>
+  ${DB.core.users.map(u=>`<div class="card" style="display:flex;justify-content:space-between;align-items:center">
+    <span><b>${u.name}</b><br><span class="small">${ROLE_NAMES[u.role]} · ${u.gov}</span></span>
+    ${u.id!==SESSION.id&&u.id!=='u_mgmt'?`<button class="mini red" data-del="${u.id}">حذف</button>`:''}</div>`).join('')}`;
+ $('nadd').onclick=async()=>{
+  const name=$('nn').value.trim(),pin=$('np').value.trim();
+  if(!name||pin.length!==4){toast('الاسم ورقم سري ٤ أرقام مطلوبين');return}
+  const core=await sget('core');core.users.push({id:'u_'+uid(),name,role:$('nr').value,pin,gov:$('ng').value});
+  if(await sset('core',core)){DB.core=core;toast('اتضاف');render()}
+ };
+ $('view').querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>{
+  if(!confirm('حذف المستخدم؟'))return;
+  const core=await sget('core');core.users=core.users.filter(u=>u.id!==b.dataset.del);
+  delete core.routes[b.dataset.del];
+  if(await sset('core',core)){DB.core=core;render()}
+ });
+};
+VIEWS.mgmt.routes=function(){
+ const reps=DB.core.users.filter(u=>u.role==='rep');
+ if(!reps.length){$('view').innerHTML='<p class="empty">أضف مندوبين الأول من تبويب الفريق</p>';return}
+ let selRep=reps[0].id, selDay=new Date().getDay(), chain='الكل', q='';
+ const draw=()=>{
+  const cur=(DB.core.routes[selRep]||{})[selDay]||[];
+  const chains=['الكل',...new Set(DB.outlets.map(o=>o.chain))];
+  const list=DB.outlets.filter(o=>(chain==='الكل'||o.chain===chain)&&(o.name+o.chain).includes(q));
+  $('view').innerHTML=`
+   <div class="f"><label>المندوب</label><select id="rr">${reps.map(u=>`<option value="${u.id}" ${u.id===selRep?'selected':''}>${u.name}</option>`).join('')}</select></div>
+   <div class="day-tabs">${DAY_ORDER.map(d=>`<button class="${d===selDay?'on':''}" data-d="${d}">${DAY_LABELS[d]}</button>`).join('')}</div>
+   <p class="hint">مختار: <b>${cur.length}</b> فرع لليوم ده</p>
+   <div class="seg">${chains.map(c=>`<button class="${c===chain?'on':''}" data-c="${c}">${c}</button>`).join('')}</div>
+   <div class="f"><input id="rq" placeholder="بحث بالاسم" value="${q}"></div>
+   <div style="max-height:330px;overflow:auto">${list.map(o=>`
+    <button class="rowbtn ${cur.includes(o.i)?'ok':''}" data-i="${o.i}">
+     <span><span class="nm">${o.name}</span><span class="sub">${o.chain} · ${o.gov}</span></span>
+     ${cur.includes(o.i)?'<span class="pill g">بالخط</span>':''}</button>`).join('')}</div>
+   <button class="send okbtn" id="rsave">حفظ خط ${DAY_LABELS[selDay]}</button>`;
+  $('rr').onchange=e=>{selRep=e.target.value;draw()};
+  $('view').querySelectorAll('.day-tabs button').forEach(b=>b.onclick=()=>{selDay=+b.dataset.d;draw()});
+  $('view').querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{chain=b.dataset.c;draw()});
+  $('rq').oninput=e=>{q=e.target.value.trim();draw();$('rq').focus();$('rq').setSelectionRange(q.length,q.length)};
+  $('view').querySelectorAll('.rowbtn').forEach(b=>b.onclick=()=>{
+   const i=+b.dataset.i;const r=DB.core.routes[selRep]=DB.core.routes[selRep]||{};
+   const arr=r[selDay]=r[selDay]||[];
+   const at=arr.indexOf(i);if(at>=0)arr.splice(at,1);else arr.push(i);
+   draw();
+  });
+  $('rsave').onclick=async()=>{
+   const core=await sget('core');core.routes=DB.core.routes;
+   if(await sset('core',core)){toast('اتحفظ الخط')}
+  };
+ };
+ draw();
+};
+VIEWS.mgmt.outlets=function(){
+ let q='',chain='الكل';
+ const draw=()=>{
+  const chains=['الكل',...new Set(DB.outlets.map(o=>o.chain))];
+  const list=DB.outlets.filter(o=>(chain==='الكل'||o.chain===chain)&&(o.name+o.chain+o.mgr).includes(q)).slice(0,60);
+  const unk=DB.outlets.filter(o=>o.pay==='unknown').length;
+  $('view').innerHTML=`
+   ${unk?`<div class="card feeditem bad"><b>${unk} فرع طريقة دفعهم غير مسجلة</b> <span class="small">(أغلبهم Circle K) — حدّدها من هنا</span></div>`:''}
+   <div class="seg">${chains.map(c=>`<button class="${c===chain?'on':''}" data-c="${c}">${c}</button>`).join('')}</div>
+   <div class="f"><input id="oq" placeholder="بحث" value="${q}"></div>
+   ${list.map(o=>`<div class="card">
+    <b>${o.name}</b> <span class="small">— ${o.chain} · ${o.gov}</span><br>
+    <span class="small">${o.mgr||''} ${o.tel?'· '+o.tel:''}</span><br>
+    <span class="pill ${o.ordering==='central'?'v':'n'}">${ORD_LABEL[o.ordering]}</span>
+    <span class="pill ${o.pay==='transfer'?'g':o.pay==='unknown'?'r':'y'}">${PAY_LABEL[o.pay]}</span>
+    <div class="btnrow">
+     <button class="mini" data-cyc="ordering" data-i="${o.i}">تغيير الأوردر</button>
+     <button class="mini" data-cyc="pay" data-i="${o.i}">تغيير الدفع</button>
+    </div></div>`).join('')}`;
+  $('view').querySelectorAll('.seg button').forEach(b=>b.onclick=()=>{chain=b.dataset.c;draw()});
+  $('oq').oninput=e=>{q=e.target.value.trim();draw();$('oq').focus();$('oq').setSelectionRange(q.length,q.length)};
+  $('view').querySelectorAll('[data-cyc]').forEach(b=>b.onclick=async()=>{
+   const i=+b.dataset.i;const outs=await sget('outlets');const o=outs.find(x=>x.i===i);
+   if(b.dataset.cyc==='ordering'){o.ordering=o.ordering==='rep'?'mixed':o.ordering==='mixed'?'central':'rep'}
+   else{o.pay=o.pay==='cheque'?'transfer':o.pay==='transfer'?'unknown':'cheque'}
+   if(await sset('outlets',outs)){DB.outlets=outs;draw()}
+  });
+ };
+ draw();
+};
+
+/* ================= BOOT ================= */
+(async function(){
+ $('view').innerHTML='<p class="empty">جارٍ التحميل…</p>';
+ try{
+  await ensureSeeds();
+  await loadOps();
+  render();
+ }catch(e){
+  $('view').innerHTML='<p class="empty">حصل خطأ في التحميل — اقفل وافتح تاني</p>';
+ }
+})();
+</script>
+</body>
+</html>
