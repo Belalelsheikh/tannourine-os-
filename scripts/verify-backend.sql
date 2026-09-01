@@ -19,7 +19,7 @@ with results as (
   select 4, 'outlets payment_path=unknown (Circle K)', '121',
          count(*)::text from outlets where payment_path = 'unknown'
   union all
-  select 5, 'outlets ordering_mode=central', '20',
+  select 5, 'outlets ordering_mode=central (20 Gourmet + 3 Seoudi)', '23',
          count(*)::text from outlets where ordering_mode = 'central'
   union all
   select 6, 'profiles rows (0 before provisioning, 14 after)', '0 or 14',

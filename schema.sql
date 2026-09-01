@@ -426,3 +426,21 @@ create policy sto_ins on storage.objects for insert to authenticated
 drop policy if exists sto_sel on storage.objects;
 create policy sto_sel on storage.objects for select to authenticated
   using (bucket_id in ('visit-photos','pods'));
+
+-- ============================================================
+-- v1.3 PATCH — storage upsert (found by executed acceptance §15.9, 2026-09-01)
+--
+-- sto_ins covers INSERT only. Supabase Storage `upload(..., { upsert: true })`
+-- against an existing object performs an UPDATE on storage.objects, which had
+-- no policy and was refused with 42501. That breaks the retry path §15.9
+-- depends on: a coordinator resubmitting after a failed submit could not
+-- re-upload the shelf photo, so the retry never converged.
+--
+-- Same predicate as sto_ins, both sides, so an authenticated user may only
+-- overwrite within the two app buckets.
+-- ============================================================
+
+drop policy if exists sto_upd on storage.objects;
+create policy sto_upd on storage.objects for update to authenticated
+  using      (bucket_id in ('visit-photos','pods'))
+  with check (bucket_id in ('visit-photos','pods'));

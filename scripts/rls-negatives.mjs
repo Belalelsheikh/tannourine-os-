@@ -58,14 +58,30 @@ function judgeWrite({ data, error }) {
   return { verdict: 'FAIL', detail: `WRITE SUCCEEDED — ${JSON.stringify(data)?.slice(0, 120)}` };
 }
 
-function judgeRead({ data, error }) {
+// `visibleRows` is what a privileged session can see in the same relation. Without
+// it, "0 rows" is ambiguous: an empty table returns 0 rows to everyone, and reading
+// that as a policy win is a vacuous pass. Only an empty result from a relation that
+// demonstrably HAS rows is evidence of RLS.
+function judgeRead({ data, error }, visibleRows) {
   if (error) {
     const blocked = error.code === '42501' || /permission denied/i.test(error.message);
     return blocked ? { verdict: 'PASS', detail: 'refused' }
                    : { verdict: 'INCONCLUSIVE', detail: error.message };
   }
-  if (!data || data.length === 0) return { verdict: 'PASS', detail: '0 rows' };
+  if (!data || data.length === 0) {
+    if (visibleRows === 0) {
+      return { verdict: 'INCONCLUSIVE', detail: 'relation is empty — 0 rows proves nothing' };
+    }
+    return { verdict: 'PASS', detail: `0 rows (privileged session sees ${visibleRows})` };
+  }
   return { verdict: 'FAIL', detail: `LEAKED ${data.length} row(s)` };
+}
+
+/** How many rows a privileged (mgmt) session can see, for the check above. */
+async function visibleTo(sb, relation) {
+  const { data, error } = await sb.from(relation).select('*').limit(50);
+  if (error) return 0;
+  return data?.length ?? 0;
 }
 
 // ------------------------------------------------------------
@@ -103,7 +119,8 @@ async function main() {
   } else record(2, 'nada (coordinator)', 'update collections → cleared', 'INCONCLUSIVE', 'no collection exists yet');
 
   {
-    const r = judgeRead(await nada.from('audit_log').select('*').limit(5));
+    const seen = await visibleTo(mgmt, 'audit_log');
+    const r = judgeRead(await nada.from('audit_log').select('*').limit(5), seen);
     record(3, 'nada (coordinator)', 'select audit_log', r.verdict, r.detail);
   }
 
@@ -135,11 +152,13 @@ async function main() {
   // ---------- anonymous ----------
   const anonSb = client();
   {
-    const r = judgeRead(await anonSb.from('invoice_open').select('*').limit(5));
+    const seen = await visibleTo(mgmt, 'invoice_open');
+    const r = judgeRead(await anonSb.from('invoice_open').select('*').limit(5), seen);
     record(7, 'anonymous', 'select invoice_open (view)', r.verdict, r.detail);
   }
   {
-    const r = judgeRead(await anonSb.from('outlets').select('*').limit(5));
+    const seen = await visibleTo(mgmt, 'outlets');
+    const r = judgeRead(await anonSb.from('outlets').select('*').limit(5), seen);
     record(8, 'anonymous', 'select outlets', r.verdict, r.detail);
   }
 
