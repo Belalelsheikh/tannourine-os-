@@ -45,7 +45,7 @@ async function run() {
   const elhag = await as('elhag@tannourine.local');
 
   const { data: central } = await elhag.from('outlets')
-    .select('id').eq('ordering_mode', 'central').limit(1);
+    .select('id').eq('ordering_mode', 'central').order('id', { ascending: true }).limit(1);
   OUTLET_CENTRAL = central?.[0]?.id;
   const { data: skus } = await elhag.from('skus').select('id').limit(3);
   const SKU = skus.map(s => s.id);
@@ -179,6 +179,11 @@ async function run() {
     });
     if (!subscribed) skip('15.3', 'realtime: second client receives the event', 'channel never subscribed');
     else {
+      // SUBSCRIBED fires before the server finishes binding the postgres_changes
+      // filter. Writing immediately races that bind and the event is missed —
+      // a harness artefact, not app behaviour (real screens subscribe on mount
+      // and receive events long afterwards). Settle before writing.
+      await new Promise(r => setTimeout(r, 1500));
       const probeId = randomUUID();
       await nada.from('visits').insert({
         id: probeId, coordinator_id: nada.uid, outlet_id: OUTLET_REP,

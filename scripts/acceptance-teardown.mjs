@@ -1,49 +1,52 @@
-// Companion to acceptance-run.mjs: removes every row that run created and
-// restores outlets/profiles to seed values. Service key (bypasses RLS by design).
+// Companion to acceptance-run.mjs: removes every row the run created and restores
+// outlets/profiles to seed values. Service key (bypasses RLS by design).
+//
 //   NODE_USE_ENV_PROXY=1 SB_URL=... SB_SERVICE=... node scripts/acceptance-teardown.mjs
-// Verify afterwards that visits/orders/invoices/collections/routes are all 0.
-
+//
+// Deliberately exhaustive rather than targeted: it clears ALL transactional rows
+// and ALL pins. An earlier version deleted only visits at outlets [1,180], which
+// silently missed rows once the runner picked a different `central` outlet — it
+// left 2 visits, 4 lines, 2 follow-ups, 2 pins and 4 storage objects behind.
+// Safe precisely because this is a pre-launch project with no real data: run it
+// against a project that has live staff data and you WILL destroy that data.
 import { createClient } from '@supabase/supabase-js';
-const sb = createClient(process.env.SB_URL, process.env.SB_SERVICE, {auth:{persistSession:false}});
-const log=(n,e)=>console.log(e?`  x ${n}: ${e.message}`:`  ok ${n}`);
 
-// test visits = any visit created today by the acceptance run at outlets 1/180
-const { data: visits } = await sb.from('visits').select('id,photo_path')
-  .in('outlet_id',[1,180]);
-const vids = (visits??[]).map(v=>v.id);
+const sb = createClient(process.env.SB_URL, process.env.SB_SERVICE, { auth: { persistSession: false } });
+const log = (n, e) => console.log(e ? `  x  ${n}: ${e.message}` : `  ok ${n}`);
+const ALL_UUID = '00000000-0000-0000-0000-000000000000';
 
-if (vids.length) {
-  log('followups', (await sb.from('followups').delete().in('visit_id',vids)).error);
-  log('visit_lines',(await sb.from('visit_lines').delete().in('visit_id',vids)).error);
-  const paths = vids.map(v=>`${v}.jpg`);
-  const { error: se } = await sb.storage.from('visit-photos').remove(paths);
-  log(`visit-photos (${paths.length})`, se);
-  log('visits',      (await sb.from('visits').delete().in('id',vids)).error);
+// ---- storage: list and remove everything in both buckets ----
+for (const bucket of ['visit-photos', 'pods']) {
+  const { data, error } = await sb.storage.from(bucket).list('', { limit: 1000 });
+  if (error) { log(`${bucket} list`, error); continue; }
+  const names = (data ?? []).map(o => o.name);
+  if (names.length) {
+    const { error: re } = await sb.storage.from(bucket).remove(names);
+    log(`${bucket} (${names.length} objects)`, re);
+  } else log(`${bucket} (already empty)`);
 }
 
-// invoices/collections/orders from both marker sets
-const { data: ords } = await sb.from('orders').select('id')
-  .in('po_number',['ACCEPTANCE-RUN','ACCEPTANCE-FIXTURE']);
-const oids=(ords??[]).map(o=>o.id);
-const { data: invs } = await sb.from('invoices').select('id').in('order_id', oids.length?oids:['00000000-0000-0000-0000-000000000000']);
-const iids=(invs??[]).map(i=>i.id);
-if (iids.length){
-  log('collections',(await sb.from('collections').delete().in('invoice_id',iids)).error);
-  const { error: pe } = await sb.storage.from('pods').remove(iids.map(i=>`${i}.jpg`));
-  log('pods', pe);
-  log('invoices',   (await sb.from('invoices').delete().in('id',iids)).error);
-}
-if (oids.length){
-  log('order_lines',(await sb.from('order_lines').delete().in('order_id',oids)).error);
-  log('orders',     (await sb.from('orders').delete().in('id',oids)).error);
-}
+// ---- transactional tables, children before parents ----
+log('followups',    (await sb.from('followups').delete().neq('id', ALL_UUID)).error);
+log('visit_lines',  (await sb.from('visit_lines').delete().neq('sku_id', '~none~')).error);
+log('visits',       (await sb.from('visits').delete().neq('id', ALL_UUID)).error);
+log('collections',  (await sb.from('collections').delete().neq('id', ALL_UUID)).error);
+log('invoice_lines',(await sb.from('invoice_lines').delete().neq('sku_id', '~none~')).error);
+log('invoices',     (await sb.from('invoices').delete().neq('id', ALL_UUID)).error);
+log('order_lines',  (await sb.from('order_lines').delete().neq('sku_id', '~none~')).error);
+log('orders',       (await sb.from('orders').delete().neq('id', ALL_UUID)).error);
+log('container_lines', (await sb.from('container_lines').delete().neq('sku_id', '~none~')).error);
+log('containers',   (await sb.from('containers').delete().neq('id', ALL_UUID)).error);
+log('routes',       (await sb.from('routes').delete().neq('weekday', -1)).error);
+log('audit_log',    (await sb.from('audit_log').delete().neq('id', -1)).error);
 
-// reference data restored to seed values
-log('outlet 1 payment_path → unknown',
-  (await sb.from('outlets').update({payment_path:'unknown'}).eq('id',1)).error);
-log('outlet 180 pin cleared',
-  (await sb.from('outlets').update({lat:null,lng:null,pin_set_by:null,pin_set_at:null}).eq('id',180)).error);
-log('nada supervisor_id → null',
-  (await sb.from('profiles').update({supervisor_id:null}).eq('role','coordinator')).error);
-log('routes cleared',    (await sb.from('routes').delete().neq('weekday',-1)).error);
-log('audit_log probe',   (await sb.from('audit_log').delete().eq('entity_id','ACCEPTANCE-FIXTURE')).error);
+// ---- reference data back to seed values ----
+log('all pins cleared',
+  (await sb.from('outlets').update({ lat: null, lng: null, pin_set_by: null, pin_set_at: null })
+     .not('lat', 'is', null)).error);
+log("Circle K payment_path → unknown",
+  (await sb.from('outlets').update({ payment_path: 'unknown' }).eq('chain', 'Circle K')).error);
+log('coordinator supervisor_id → null',
+  (await sb.from('profiles').update({ supervisor_id: null }).eq('role', 'coordinator')).error);
+
+console.log('\nVerify: every transactional table should now count 0, pins 0, storage 0.');
