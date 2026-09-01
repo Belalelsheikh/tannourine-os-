@@ -16,6 +16,49 @@ and none of them is inflated:
 
 **No item is marked PASS on the strength of having written the code.**
 
+## Run log — 2026-09-01: live project exists, but is unreachable from the build session
+
+A Supabase project (`tlrhztjnzptuvkrkrjod`) is now live and the schema and both seeds were run
+from the dashboard by the project owner. An attempt was made to execute §15.1–7 and §15.10
+against it from the Claude Code web session. **It could not reach the project.**
+
+```
+CONNECT tlrhztjnzptuvkrkrjod.supabase.co:443 → HTTP/1.1 403 Forbidden
+proxy: "gateway answered 403 to CONNECT (policy denial or upstream failure)"
+```
+
+The session's egress policy allows `registry.npmjs.org` and `github.com` and denies everything
+else, including `*.supabase.co` and `api.supabase.com`. This is an environment network policy,
+not a credential or project fault: the anon and service keys were never exercised at all.
+
+Consequently **no verdict below was changed on the strength of the project existing.** The
+blocked items remain blocked. What changed:
+
+| | |
+|---|---|
+| `.env` written with URL + anon key | PASS — key decoded and confirmed `role: anon` |
+| `.env` excluded from git | PASS — `.gitignore:10`, `git check-ignore` confirms |
+| `npm install` | PASS — exit 0 |
+| `npm run build` | PASS — `tsc -b && vite build`, 109 modules, 0 errors, SW + 12 precache entries |
+| `dist/` contains no service key | PASS — grepped for `service_role` and its base64 form; none |
+| Backend state (seeds, policies, buckets) | **NOT VERIFIED** — unreachable |
+| §15.7 RLS negatives | **NOT RUN** — unreachable |
+| Edge function deployed | **NOT DONE** — `api.supabase.com` unreachable |
+| Users provisioned | **NOT DONE** — Auth admin API unreachable |
+
+Two harnesses were written so these can be executed from a machine that *can* reach the project:
+
+- `scripts/verify-backend.sql` — read-only; paste into the dashboard SQL editor. 31 checks
+  covering seed counts, `outlets.id` starting at 0, both RPCs, both views, all 11 v1.1/v1.2
+  policies, both storage policies, both buckets *and their privacy*, realtime publication
+  membership, and RLS-enabled table count. Every row should read PASS.
+- `scripts/rls-negatives.mjs` — automated §15.7, all 8 cases, using the anon key and real
+  logins only. It reports INCONCLUSIVE (never PASS) for a case with no fixture row to attack,
+  because "0 rows changed" proves nothing when there was nothing to change.
+
+> Neither harness has been executed against a live database. They are type/syntax-checked only.
+> Their own first run is itself a test of the harness, not just of the backend.
+
 ## What was executed here
 
 | Check | Result |
@@ -235,6 +278,23 @@ Code complete: `src/screens/supervisor/TeamNow.tsx`, embedded into **اللوح�
 
 ## What unblocks the rest
 
-Work through `README-DEPLOY.md` Steps 1–9, then re-run this document top to bottom. The single
-highest-value check afterwards is **§15.7** — it is the only one that tests the v1.1/v1.2 patches
-directly, and it is the one a UI walkthrough cannot substitute for.
+As of 2026-09-01 the blocker is no longer "no project" — the project exists. It is **network
+reach**: whoever executes the remaining items must run from a machine that can reach
+`*.supabase.co` and `api.supabase.com`. Either
+
+1. allow those hosts in the Claude Code web environment's network policy and re-run from there, or
+2. run the two harnesses plus provisioning and the edge-function deploy from a local machine.
+
+Order matters, because later items depend on earlier ones:
+
+| Step | Command | Gate |
+|---|---|---|
+| 1 | paste `scripts/verify-backend.sql` into the dashboard SQL editor | all 31 rows PASS before continuing |
+| 2 | `SUPABASE_URL=… SUPABASE_SERVICE_KEY=… node scripts/provision-users.mjs` | 14 users, 14 profiles, 7 coordinators with null supervisor |
+| 3 | `supabase functions deploy admin-create-user` + set its `SUPABASE_SERVICE_ROLE_KEY` secret | function responds |
+| 4 | `node --env-file=.env scripts/rls-negatives.mjs` | 0 FAIL. Any FAIL blocks deployment |
+| 5 | walk §15.1–6 and §15.10 in the UI | fills the INCONCLUSIVE cases from step 4; re-run step 4 after |
+
+**§15.7 remains the single highest-value check.** It is the only one that tests the v1.1/v1.2
+patches directly, and no UI walkthrough substitutes for it. A `FAIL` there means a role can write
+something it must not, and is a stop-ship.
