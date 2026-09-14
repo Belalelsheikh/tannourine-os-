@@ -26,6 +26,14 @@ export function StatTiles({ items }: { items: { n: ReactNode; label: string; ton
   );
 }
 
+/**
+ * Arabic-Indic (٠-٩) and extended (۰-۹) numerals → ASCII. Egyptian Android keyboards
+ * emit these, and JS `\d` is ASCII-only, so without this they are stripped as non-numeric
+ * and the field silently stays empty.
+ */
+const toAsciiDigits = (s: string) =>
+  s.replace(/[٠-٩۰-۹]/g, (d) => String(d.charCodeAt(0) & 0xf));
+
 /** Stepper input (− value +) — the only quantity control in the system (PRD §11). */
 export function Stepper({
   value, onChange, allowEmpty = false,
@@ -39,8 +47,16 @@ export function Stepper({
         className={value === 0 ? 'zero' : ''}
         value={value === null ? '' : String(value)}
         placeholder={allowEmpty ? '—' : '0'}
+        /*
+         * Select on focus so the first keystroke replaces the standing value instead of
+         * landing beside it: tapping the centred «0» put the caret before it, so typing 12
+         * produced 120 — a 10× order. preventDefault on mouseup stops Safari collapsing
+         * that selection on the tap that follows focus.
+         */
+        onFocus={(e) => e.target.select()}
+        onMouseUp={(e) => e.preventDefault()}
         onChange={(e) => {
-          const digits = e.target.value.replace(/\D/g, '');
+          const digits = toAsciiDigits(e.target.value).replace(/\D/g, '');
           onChange(digits === '' ? (allowEmpty ? null : 0) : Number(digits));
         }}
       />
