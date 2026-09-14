@@ -31,6 +31,7 @@ body {
   justify-content: center;
   align-items: flex-start;
   min-height: 100vh;
+  min-height: 100dvh;
   padding: 24px 12px;
 }
 
@@ -44,17 +45,24 @@ body {
   box-shadow: 0 18px 50px rgba(16, 34, 46, .28);
   display: flex;
   flex-direction: column;
-  min-height: 740px;
   height: calc(100vh - 48px);
+  height: calc(100dvh - 48px);
   position: relative;
 }
 @media (max-width: 470px) {
   body { padding: 0; }
-  .phone { border-radius: 0; min-height: 100vh; height: 100vh; box-shadow: none; }
+  .phone {
+    border-radius: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    height: 100vh;
+    height: 100dvh;
+    box-shadow: none;
+  }
 }
 /* Office roles (router, invoice, finance, mgmt) widen on laptops — PRD §4. */
 @media (min-width: 900px) {
-  .phone.wide { max-width: 1180px; border-radius: 14px; height: calc(100vh - 48px); }
+  .phone.wide { max-width: 1180px; border-radius: 14px; height: calc(100vh - 48px); height: calc(100dvh - 48px); }
   .phone.wide .body { padding: 20px 26px 26px; }
   .phone.wide .cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 16px; align-items: start; }
   .phone.wide .cols-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 16px; align-items: start; }
@@ -68,7 +76,7 @@ body {
 .bar {
   background: var(--ink);
   color: var(--paper);
-  padding: 13px 16px;
+  padding: calc(13px + env(safe-area-inset-top, 0px)) 16px 13px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -100,7 +108,7 @@ body {
   vertical-align: middle;
 }
 
-.body { padding: 14px; flex: 1; overflow-y: auto; padding-bottom: 76px; }
+.body { padding: 14px; flex: 1; overflow-y: auto; padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
 
 .tabs {
   position: absolute;
@@ -110,6 +118,7 @@ body {
   background: var(--ink);
   border-top: 1px solid #0a161e;
   flex: none;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .tabs button {
   flex: 1;
@@ -373,7 +382,7 @@ table.t { width: 100%; border-collapse: collapse; background: var(--card); font-
 /* ---------- toast ---------- */
 .toast {
   position: fixed;
-  bottom: 76px;
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   width: calc(100% - 28px);
