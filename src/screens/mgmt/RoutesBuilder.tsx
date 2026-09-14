@@ -44,13 +44,37 @@ export default function RoutesBuilder() {
   const save = async () => {
     if (!coordId) return;
     setErr(null);
-    // Replace the whole day: delete then insert. RLS grants mgmt/router both.
+
+    // Read the day's current order before destroying it. Saving is still delete-then-insert,
+    // so without this the visit order the router planned is silently replaced by outlet_id
+    // order the first time anyone edits the day.
+    const prev = await sb
+      .from('routes')
+      .select('outlet_id, seq')
+      .eq('coordinator_id', coordId)
+      .eq('weekday', day);
+    if (prev.error) { setErr(errText(prev.error)); return; }
+
+    const prevRows = (prev.data ?? []) as { outlet_id: number; seq: number | null }[];
+    const seqByOutlet = new Map(prevRows.map((r) => [r.outlet_id, r.seq]));
+    // A day that was never ordered stays unordered — inventing an order here would present
+    // an arbitrary outlet_id sequence to the coordinator as if someone had planned it.
+    const wasOrdered = prevRows.some((r) => r.seq != null);
+    let nextSeq = Math.max(0, ...prevRows.map((r) => r.seq ?? 0)) + 1;
+
     const del = await sb.from('routes').delete().eq('coordinator_id', coordId).eq('weekday', day);
     if (del.error) { setErr(errText(del.error)); return; }
 
     if (selected.size > 0) {
       const ins = await sb.from('routes').insert(
-        [...selected].map((outlet_id) => ({ coordinator_id: coordId, weekday: day, outlet_id })),
+        // Outlets already on the day keep their seq; additions land after the current maximum,
+        // in the order they were picked. Removals leave gaps, which sorting does not care about.
+        [...selected].map((outlet_id) => ({
+          coordinator_id: coordId,
+          weekday: day,
+          outlet_id,
+          seq: wasOrdered ? seqByOutlet.get(outlet_id) ?? nextSeq++ : null,
+        })),
       );
       if (ins.error) { setErr(errText(ins.error)); return; }
     }
