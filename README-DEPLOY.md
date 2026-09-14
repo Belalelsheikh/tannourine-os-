@@ -175,6 +175,28 @@ This creates a folder called **dist**. That folder *is* the app.
 
 ---
 
+## Migrations — read before running any `supabase db` command
+
+> ### ⛔ Never run `supabase db reset` or `supabase db push` against the production project.
+>
+> The production database (`tlrhztjnzptuvkrkrjod`) was **bootstrapped by hand**: `schema.sql`
+> was pasted into the SQL Editor and run once. It is *not* in
+> `supabase_migrations.schema_migrations`, which holds exactly one row —
+> `20260914093427 add_routes_seq`.
+>
+> So the CLI believes the entire base schema is missing. `db push` would try to create every
+> table, policy, and function that already exists; `db reset` would drop live operational data —
+> visits, orders, invoices, cheques — and rebuild from a history that does not contain them.
+>
+> **Migrations from here forward only.** Every new schema change gets its own file in
+> `supabase/migrations/` (create it with `supabase migration new <name>`, never a hand-written
+> filename) and is applied deliberately — via MCP or the SQL Editor — then reconciled so the
+> local filename matches the remote `version`. Baselining `schema.sql` into migration history is
+> a separate, deliberate job; until someone does it, treat the CLI's migration commands as unsafe
+> here.
+
+---
+
 ## Step 10 — Install on phones
 
 ### Android (Chrome)
