@@ -31,3 +31,17 @@ Follow PRD §17 exactly. After each phase, run the matching acceptance items fro
 - Single source of truth is `prd/` inside `tannourine-build-package.zip`. Any loose `PRD.md` / `schema.sql` must be sha256-identical to the zip's copies; on mismatch the zip wins.
 - Visit submit is an UPDATE on the coordinator's own `pending` visit where `checkout_at is null`; retries after a partial failure may re-write `visit_lines` (policy `vlines_upd` allows upsert while the visit is still `pending`).
 - Invoice role may only move an order from `approved` to `invoiced` — the RLS `using`/`with check` pair enforces both ends.
+
+## Agent skills
+
+### Issue tracker
+
+Issues live in this repo's GitHub Issues (`Belalelsheikh/tannourine-os-`), driven via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five canonical roles, each label string equal to its name. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
