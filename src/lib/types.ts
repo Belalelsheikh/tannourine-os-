@@ -50,6 +50,8 @@ export interface RouteRow {
   coordinator_id: string;
   weekday: number;
   outlet_id: number;
+  /** Visit order within the day; null for rows RoutesBuilder wrote, which sort last. */
+  seq: number | null;
 }
 
 export interface Visit {

@@ -76,7 +76,7 @@ export function AppProvider({ children, onToast }: { children: ReactNode; onToas
         sb.from('outlets').select('*').order('chain').order('name'),
         sb.from('skus').select('*').order('line').order('id'),
         sb.from('profiles').select('*').order('full_name'),
-        sb.from('routes').select('*'),
+        sb.from('routes').select('*').order('weekday').order('seq', { nullsFirst: false }).order('outlet_id'),
       ]);
       const firstErr = [me, outlets, skus, profiles, routes].find((r) => r.error)?.error;
       if (firstErr) throw firstErr;

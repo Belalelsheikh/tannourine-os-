@@ -29,6 +29,8 @@ export default function RouteToday() {
     if (!profile) return [];
     const ids = routes
       .filter((r) => r.coordinator_id === profile.id && r.weekday === weekday)
+      // seq is the planned visit order; nulls (RoutesBuilder rows) fall to the end.
+      .sort((a, b) => (a.seq ?? Infinity) - (b.seq ?? Infinity) || a.outlet_id - b.outlet_id)
       .map((r) => r.outlet_id);
     return ids.map((id) => outletById(id)).filter((o): o is Outlet => o != null);
   }, [routes, profile?.id, weekday, outletById]);
