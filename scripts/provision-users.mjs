@@ -2,6 +2,10 @@
 // Idempotent: skips existing emails. Sets temp password for all; force change on first login is out of scope v1.
 // Two passes: (1) create auth users + upsert profiles, (2) link profiles.supervisor_id from supervisor_email.
 import { createClient } from '@supabase/supabase-js';
+// users.json is a BOOTSTRAP SNAPSHOT, not the source of truth. The live database has drifted
+// from it (e.g. محمد عبد الحميد exists in auth.users but not in the seed, and supervisor links
+// were set directly). Treat auth.users + profiles as authoritative; do not regenerate this file
+// from live auth, and do not assume an account is absent because it is missing here.
 import users from './users.json' with { type: 'json' };
 
 const url = process.env.SUPABASE_URL, key = process.env.SUPABASE_SERVICE_KEY;
