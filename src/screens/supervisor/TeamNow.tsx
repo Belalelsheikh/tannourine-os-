@@ -17,6 +17,17 @@ interface Event {
   amount?: number;
 }
 
+/** One coordinator's standing on the board, computed once so sorting and rendering agree. */
+interface TeamEntry {
+  c: Profile;
+  events: Event[];
+  openVisit: Visit | null;
+  routed: boolean;
+}
+
+/** Collapse the no-route group only once it is big enough to be the noise it was named for. */
+const COLLAPSE_MIN = 3;
+
 /**
  * «الفريق الآن» — PRD §5.8. Positions are per-event snapshots, never a live track:
  * everything here is derived from visit check-in/checkout rows and cheque rows
@@ -25,6 +36,7 @@ interface Event {
 export default function TeamNow({ embedded = false }: { embedded?: boolean }) {
   const { profile, profiles, outletById } = useApp();
   const [openTrail, setOpenTrail] = useState<string | null>(null);
+  const [showIdle, setShowIdle] = useState(false);
   const [, setClock] = useState(0);
 
   // Display-only clock so «منذ HH:MM» stays honest between realtime pushes.
@@ -86,11 +98,38 @@ export default function TeamNow({ embedded = false }: { embedded?: boolean }) {
     return [...visitEvents, ...chequeEvents].sort((a, b) => +new Date(b.at) - +new Date(a.at));
   };
 
-  const Row = ({ c }: { c: Profile }) => {
-    const events = eventsFor(c.id);
-    const openVisit = data.visits.find((v) => v.coordinator_id === c.id && v.checkout_at == null);
+  /**
+   * The board exists to show who is working, so it is ordered by that and nothing else:
+   * (0) في زيارة now, (1) has a route today **or** has logged anything today, (2) neither.
+   *
+   * Bucket 1 keys on activity, not on the route alone. A coordinator with no route can still
+   * log an off-route visit (RouteToday) or a cheque, and ranking on `routed` alone would sweep
+   * someone demonstrably working into the collapsed group and hide them.
+   */
+  const rankOf = (e: TeamEntry) => (e.openVisit ? 0 : e.routed || e.events.length > 0 ? 1 : 2);
+
+  const entries = useMemo<TeamEntry[]>(() => {
+    const list: TeamEntry[] = team.map((c) => ({
+      c,
+      events: eventsFor(c.id),
+      openVisit: data.visits.find((v) => v.coordinator_id === c.id && v.checkout_at == null) ?? null,
+      routed: data.routedIds.includes(c.id),
+    }));
+    return list.sort(
+      (a, b) =>
+        rankOf(a) - rankOf(b) ||
+        // Most recently active first inside a bucket; no-activity rows fall back to name.
+        +new Date(b.events[0]?.at ?? 0) - +new Date(a.events[0]?.at ?? 0) ||
+        a.c.full_name.localeCompare(b.c.full_name, 'ar'),
+    );
+  }, [team, data]);
+
+  const quiet = entries.filter((e) => rankOf(e) === 2);
+  const folded = quiet.length >= COLLAPSE_MIN;
+  const listed = folded ? entries.filter((e) => rankOf(e) !== 2) : entries;
+
+  const Row = ({ e: { c, events, openVisit, routed } }: { e: TeamEntry }) => {
     const last = events[0];
-    const routed = data.routedIds.includes(c.id);
     const idle = !openVisit && events.length === 0 && routed;
 
     const tone = openVisit ? 'ok' : idle ? 'bad' : '';
@@ -190,7 +229,24 @@ export default function TeamNow({ embedded = false }: { embedded?: boolean }) {
       )}
 
       {team.length === 0 && <Empty>مفيش منسقين في نطاقك</Empty>}
-      {team.map((c) => <Row key={c.id} c={c} />)}
+      {listed.map((e) => <Row key={e.c.id} e={e} />)}
+
+      {folded && (
+        <>
+          <button
+            type="button"
+            className="foldrow"
+            aria-expanded={showIdle}
+            onClick={() => setShowIdle((v) => !v)}
+          >
+            <span>
+              {quiet.length} {quiet.length > 10 ? 'منسق' : 'منسقين'} بدون خط سير النهارده
+            </span>
+            <span className="chev">{showIdle ? '▴' : '▾'}</span>
+          </button>
+          {showIdle && quiet.map((e) => <Row key={e.c.id} e={e} />)}
+        </>
+      )}
 
       {embedded && <p className="small">آخر موقع مسجَّل، لا يوجد تتبع مستمر.</p>}
     </>

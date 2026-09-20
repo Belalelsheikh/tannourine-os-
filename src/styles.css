@@ -198,6 +198,28 @@ body {
 .feeditem.pend { border-inline-start-color: var(--warn); }
 .feeditem.viol { border-inline-start-color: var(--violet); }
 
+/* Collapsed group summary — «7 منسقين بدون خط سير النهارده». Chevron is ▾/▴ rather than
+   ◂/▸ so it reads the same in RTL. */
+.foldrow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  padding: 10px 13px;
+  margin-bottom: 9px;
+  text-align: start;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--slate);
+  transition: background .12s;
+}
+.foldrow:active { background: #E6EBE8; }
+.foldrow .chev { color: var(--mute); font-size: 11px; }
+
 /* ---------- pills ---------- */
 .pill { font-size: 10.5px; padding: 3px 8px; border-radius: 99px; white-space: nowrap; font-weight: 600; display: inline-block; }
 .pill.r { background: #F6E3DF; color: var(--crit); }
