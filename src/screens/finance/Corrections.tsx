@@ -3,6 +3,7 @@ import { useApp, useQuery } from '../../lib/app';
 import { sb, errText } from '../../lib/supabase';
 import { audit } from '../../lib/audit';
 import { INVOICE_STATUS_LABEL, fmt, todayISO } from '../../lib/format';
+import { parseAmount } from '../../lib/numerals';
 import { ActionButton, Empty, ErrLine, Field, Hint, Pill, Sect } from '../../components/ui';
 import type { Invoice } from '../../lib/types';
 
@@ -70,9 +71,9 @@ export default function Corrections() {
   const addLegacy = async () => {
     if (!profile) return;
     setLgErr(null);
-    const amount = parseFloat(lgAmount);
+    const amount = parseAmount(lgAmount);
     if (lgOutlet == null) { setLgErr('اختر الفرع'); return; }
-    if (!amount || amount <= 0) { setLgErr('اكتب مبلغ صحيح'); return; }
+    if (amount == null || amount <= 0) { setLgErr('اكتب مبلغ صحيح'); return; }
     if (!lgDate) { setLgErr('تاريخ الفاتورة مطلوب'); return; }
 
     // legacy = true, delivered, no lines — ages truthfully but never touches book stock.

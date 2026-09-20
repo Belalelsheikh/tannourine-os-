@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "icons": "node scripts/make-icons.mjs",
-    "provision": "node scripts/provision-users.mjs"
+    "provision": "node scripts/provision-users.mjs",
+    "test": "node --test tests/*.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

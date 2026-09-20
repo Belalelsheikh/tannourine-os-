@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { compressImage, signedUrl } from '../lib/photo';
+import { parseCount } from '../lib/numerals';
 
 export const Sect = ({ children }: { children: ReactNode }) => <div className="sect">{children}</div>;
 export const Empty = ({ children = 'مفيش حاجة هنا' }: { children?: ReactNode }) => (
@@ -26,14 +27,6 @@ export function StatTiles({ items }: { items: { n: ReactNode; label: string; ton
   );
 }
 
-/**
- * Arabic-Indic (٠-٩) and extended (۰-۹) numerals → ASCII. Egyptian Android keyboards
- * emit these, and JS `\d` is ASCII-only, so without this they are stripped as non-numeric
- * and the field silently stays empty.
- */
-const toAsciiDigits = (s: string) =>
-  s.replace(/[٠-٩۰-۹]/g, (d) => String(d.charCodeAt(0) & 0xf));
-
 /** Stepper input (− value +) — the only quantity control in the system (PRD §11). */
 export function Stepper({
   value, onChange, allowEmpty = false,
@@ -56,8 +49,8 @@ export function Stepper({
         onFocus={(e) => e.target.select()}
         onMouseUp={(e) => e.preventDefault()}
         onChange={(e) => {
-          const digits = toAsciiDigits(e.target.value).replace(/\D/g, '');
-          onChange(digits === '' ? (allowEmpty ? null : 0) : Number(digits));
+          const n = parseCount(e.target.value);
+          onChange(n === null ? (allowEmpty ? null : 0) : n);
         }}
       />
       <button type="button" onClick={() => step(1)} aria-label="زائد">+</button>
