@@ -2,7 +2,8 @@ import { useEffect, useState, type ReactElement } from 'react';
 import { useApp, useQuery } from './lib/app';
 import { sb, configured } from './lib/supabase';
 import { ROLE_NAMES } from './lib/format';
-import type { Role } from './lib/types';
+import { coordinatorsInScope } from './lib/scope';
+import type { Profile, Role } from './lib/types';
 import Login from './components/Login';
 
 import RouteToday from './screens/coordinator/RouteToday';
@@ -66,7 +67,13 @@ const TABS: Record<Role, Tab[]> = {
 const WIDE_ROLES: Role[] = ['router', 'invoice', 'finance', 'mgmt'];
 
 /** Count badges on the bottom tab bar; recomputed on every realtime tick. */
-function useBadges(role: Role | undefined, uid: string | undefined) {
+function useBadges(profile: Profile | null, profiles: Profile[]) {
+  const role = profile?.role;
+  const uid = profile?.id;
+  // Same team the feed reviews, so the badge counts exactly the cards المتابعة shows.
+  const reviewIds = role === 'supervisor'
+    ? coordinatorsInScope(profile, profiles, { includeInactive: true }).map((c) => c.id)
+    : [];
   const { data } = useQuery<Record<string, number>>(
     async () => {
       if (!role || !uid) return {};
@@ -76,8 +83,9 @@ function useBadges(role: Role | undefined, uid: string | undefined) {
 
       if (role === 'supervisor') {
         // Submitted-but-unreviewed only: an open visit is not yet waiting on the supervisor.
-        out.feed = await cnt(
-          sb.from('visits').select('id', head).eq('status', 'pending').not('checkout_at', 'is', null));
+        out.feed = reviewIds.length === 0 ? 0 : await cnt(
+          sb.from('visits').select('id', head).eq('status', 'pending').not('checkout_at', 'is', null)
+            .in('coordinator_id', reviewIds));
         out.fups = await cnt(sb.from('followups').select('id', head).eq('status', 'open'));
       } else if (role === 'router') {
         out.board = await cnt(sb.from('orders').select('id', head).eq('status', 'pending'));
@@ -91,16 +99,16 @@ function useBadges(role: Role | undefined, uid: string | undefined) {
       }
       return out;
     },
-    [role, uid],
+    [role, uid, reviewIds.join(',')],
     {},
   );
   return data;
 }
 
 export default function App() {
-  const { session, profile, loading, error, online, reloadRef, signOut } = useApp();
+  const { session, profile, profiles, loading, error, online, reloadRef, signOut } = useApp();
   const [tabId, setTabId] = useState<string | null>(null);
-  const badges = useBadges(profile?.role, profile?.id);
+  const badges = useBadges(profile, profiles);
 
   const tabs = profile ? TABS[profile.role] : [];
   useEffect(() => {
