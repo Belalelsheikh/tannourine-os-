@@ -25,8 +25,22 @@ import Stock from './screens/mgmt/Stock';
 import Team from './screens/mgmt/Team';
 import RoutesBuilder from './screens/mgmt/RoutesBuilder';
 import OutletsEditor from './screens/mgmt/Outlets';
+import Visits, { type VisitFocus } from './screens/mgmt/Visits';
 
-interface Tab { id: string; label: string; render: () => ReactElement; }
+/** Cross-tab navigation: the dashboard opens a visit on the «الزيارات» tab. */
+interface Nav {
+  openVisit: (visitId: string, day: string) => void;
+  focus: VisitFocus | null;
+  clearFocus: () => void;
+}
+
+interface Tab { id: string; label: string; render: (nav: Nav) => ReactElement; }
+
+const visitsTab: Tab = {
+  id: 'visits',
+  label: 'الزيارات',
+  render: (nav) => <Visits focus={nav.focus} onFocusDone={nav.clearFocus} />,
+};
 
 const TABS: Record<Role, Tab[]> = {
   coordinator: [
@@ -42,7 +56,8 @@ const TABS: Record<Role, Tab[]> = {
   router: [
     { id: 'intake', label: 'تسجيل وارد', render: () => <Intake /> },
     { id: 'board', label: 'الأوردرات', render: () => <Board /> },
-    { id: 'dash', label: 'لوحة', render: () => <Dashboard readOnly /> },
+    visitsTab,
+    { id: 'dash', label: 'لوحة', render: (nav) => <Dashboard readOnly onOpenVisit={nav.openVisit} /> },
   ],
   invoice: [
     { id: 'toinv', label: 'للفوترة', render: () => <ToInvoice /> },
@@ -55,7 +70,9 @@ const TABS: Record<Role, Tab[]> = {
     { id: 'fix', label: 'تصحيحات', render: () => <Corrections /> },
   ],
   mgmt: [
-    { id: 'dash', label: 'اللوحة', render: () => <Dashboard /> },
+    { id: 'dash', label: 'اللوحة', render: (nav) => <Dashboard onOpenVisit={nav.openVisit} /> },
+    visitsTab,
+    { id: 'feed', label: 'المتابعة', render: () => <Feed /> },
     { id: 'stock', label: 'المخزون', render: () => <Stock /> },
     { id: 'team', label: 'الفريق', render: () => <Team /> },
     { id: 'routes', label: 'الخطوط', render: () => <RoutesBuilder /> },
@@ -71,7 +88,7 @@ function useBadges(profile: Profile | null, profiles: Profile[]) {
   const role = profile?.role;
   const uid = profile?.id;
   // Same team the feed reviews, so the badge counts exactly the cards المتابعة shows.
-  const reviewIds = role === 'supervisor'
+  const reviewIds = role === 'supervisor' || role === 'mgmt'
     ? coordinatorsInScope(profile, profiles, { includeInactive: true }).map((c) => c.id)
     : [];
   const { data } = useQuery<Record<string, number>>(
@@ -81,7 +98,7 @@ function useBadges(profile: Profile | null, profiles: Profile[]) {
       const head = { count: 'exact' as const, head: true };
       const out: Record<string, number> = {};
 
-      if (role === 'supervisor') {
+      if (role === 'supervisor' || role === 'mgmt') {
         // Submitted-but-unreviewed only: an open visit is not yet waiting on the supervisor.
         out.feed = reviewIds.length === 0 ? 0 : await cnt(
           sb.from('visits').select('id', head).eq('status', 'pending').not('checkout_at', 'is', null)
@@ -108,7 +125,13 @@ function useBadges(profile: Profile | null, profiles: Profile[]) {
 export default function App() {
   const { session, profile, profiles, loading, error, online, reloadRef, signOut } = useApp();
   const [tabId, setTabId] = useState<string | null>(null);
+  const [visitFocus, setVisitFocus] = useState<VisitFocus | null>(null);
   const badges = useBadges(profile, profiles);
+  const nav: Nav = {
+    openVisit: (visitId, day) => { setVisitFocus({ visitId, day }); setTabId('visits'); },
+    focus: visitFocus,
+    clearFocus: () => setVisitFocus(null),
+  };
 
   const tabs = profile ? TABS[profile.role] : [];
   useEffect(() => {
@@ -175,7 +198,7 @@ export default function App() {
         </div>
       </div>
       {!online && <div className="banner off">لا يوجد اتصال — التسجيل هيفضل محفوظ لحد ما النت يرجع</div>}
-      <main className="body">{active?.render()}</main>
+      <main className="body">{active?.render(nav)}</main>
       <div className="tabs">
         {tabs.map((t) => (
           <button key={t.id} className={t.id === active?.id ? 'on' : ''} onClick={() => setTabId(t.id)}>
