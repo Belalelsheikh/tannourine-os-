@@ -86,6 +86,13 @@ export const FLAG_LABEL: Record<string, string> = {
   unclosed: 'المشرف قفلها — ما اتبعتتش',
 };
 
+export const ORDER_STATUS_LABEL: Record<string, string> = {
+  pending: 'مستني الاعتماد',
+  approved: 'اتعتمد',
+  rejected: 'اترفض',
+  invoiced: 'اتفوتر',
+};
+
 export const INVOICE_STATUS_LABEL: Record<string, string> = {
   created: 'اتعملت',
   dispatched: 'خرجت مع العربية',

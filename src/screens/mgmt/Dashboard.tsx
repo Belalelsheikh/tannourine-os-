@@ -2,6 +2,7 @@ import { useApp, useQuery } from '../../lib/app';
 import { sb } from '../../lib/supabase';
 import { coordinatorsInScope } from '../../lib/scope';
 import { fmt, timeOf, todayISO } from '../../lib/format';
+import { cairoDateOf } from '../../lib/cairo';
 import { Empty, Hint, Sect, StatTiles } from '../../components/ui';
 import TeamNow from '../supervisor/TeamNow';
 import type { BookStock, Collection, InvoiceOpen, Visit, VisitLine } from '../../lib/types';
@@ -23,7 +24,9 @@ const EMPTY: Data = {
 };
 
 /** Management dashboard — PRD §9. `readOnly` renders the same view for the router role. */
-export default function Dashboard({ readOnly = false }: { readOnly?: boolean }) {
+export default function Dashboard({
+  readOnly = false, onOpenVisit,
+}: { readOnly?: boolean; onOpenVisit?: (visitId: string, day: string) => void }) {
   const { profile, profiles, outletById, profileById } = useApp();
 
   const { data } = useQuery<Data>(
@@ -128,12 +131,25 @@ export default function Dashboard({ readOnly = false }: { readOnly?: boolean }) 
       <Sect>آخر النشاط</Sect>
       {data.visits.length === 0 && <Empty>مفيش نشاط لسه</Empty>}
       {data.visits.slice(0, 8).map((v) => (
-        <div className="card" key={v.id}>
-          <span className="small mono">{timeOf(v.checkin_at)}</span> —{' '}
-          <b>{profileById(v.coordinator_id)?.full_name ?? '؟'}</b> زار{' '}
-          {outletById(v.outlet_id)?.name ?? '؟'}
-          {v.checkout_at == null && <span className="small"> · لسه مفتوحة</span>}
-        </div>
+        // Each row opens the full visit (counts, zero reasons, follow-up, order) on «الزيارات».
+        <button
+          type="button"
+          className="rowbtn"
+          key={v.id}
+          disabled={!onOpenVisit}
+          onClick={() => onOpenVisit?.(v.id, cairoDateOf(v.checkin_at))}
+        >
+          <span>
+            <span className="nm">
+              {profileById(v.coordinator_id)?.full_name ?? '؟'} زار <bdi>{outletById(v.outlet_id)?.name ?? '؟'}</bdi>
+            </span>
+            <span className="sub">
+              <span className="mono">{timeOf(v.checkin_at)}</span>
+              {v.checkout_at == null && ' · لسه مفتوحة'}
+            </span>
+          </span>
+          {onOpenVisit && <span className="small">التفاصيل ‹</span>}
+        </button>
       ))}
     </>
   );
