@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useApp, useQuery } from '../../lib/app';
 import { sb, errText } from '../../lib/supabase';
 import { fmt, todayISO } from '../../lib/format';
+import { parseAmount } from '../../lib/numerals';
 import { ActionButton, Empty, ErrLine, Field, Hint } from '../../components/ui';
 import type { Collection, InvoiceOpen } from '../../lib/types';
 
@@ -36,9 +37,9 @@ export default function CoordCheques() {
   const logCheque = async (inv: InvoiceOpen) => {
     if (!profile) return;
     setErr(null);
-    const amount = parseFloat(amounts[inv.id] ?? String(inv.open_amount));
+    const amount = parseAmount(amounts[inv.id] ?? String(inv.open_amount));
     const chequeDate = dates[inv.id] ?? '';
-    if (!amount || amount <= 0) { setErr('اكتب مبلغ صحيح'); return; }
+    if (amount == null || amount <= 0) { setErr('اكتب مبلغ صحيح'); return; }
     if (amount > inv.open_amount) { setErr('المبلغ أكبر من المفتوح على الفاتورة'); return; }
     if (!chequeDate) { setErr('تاريخ الشيك مطلوب'); return; }
 

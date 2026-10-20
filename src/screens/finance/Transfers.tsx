@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useApp, useQuery } from '../../lib/app';
 import { sb, errText } from '../../lib/supabase';
 import { fmt, todayISO } from '../../lib/format';
+import { parseAmount } from '../../lib/numerals';
 import { ActionButton, Empty, ErrLine, Hint } from '../../components/ui';
 import type { InvoiceOpen } from '../../lib/types';
 
@@ -33,8 +34,8 @@ export default function Transfers() {
 
   const logTransfer = async (inv: InvoiceOpen) => {
     setErr(null);
-    const amount = parseFloat(amounts[inv.id] ?? String(inv.open_amount));
-    if (!amount || amount <= 0) { setErr('اكتب مبلغ صحيح'); return; }
+    const amount = parseAmount(amounts[inv.id] ?? String(inv.open_amount));
+    if (amount == null || amount <= 0) { setErr('اكتب مبلغ صحيح'); return; }
     if (amount > inv.open_amount) { setErr('المبلغ أكبر من المفتوح على الفاتورة'); return; }
 
     const { error } = await sb.from('collections').insert({

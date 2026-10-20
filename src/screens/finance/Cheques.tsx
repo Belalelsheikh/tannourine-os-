@@ -3,6 +3,7 @@ import { useApp, useQuery } from '../../lib/app';
 import { sb, errText } from '../../lib/supabase';
 import { audit } from '../../lib/audit';
 import { daysSince, fmt } from '../../lib/format';
+import { parseAmount } from '../../lib/numerals';
 import { ActionButton, Empty, ErrLine, Sect } from '../../components/ui';
 import type { Collection } from '../../lib/types';
 
@@ -50,8 +51,8 @@ export default function FinCheques() {
   const saveEdit = async (c: Collection) => {
     if (!profile) return;
     setErr(null);
-    const newAmount = parseFloat(amt);
-    if (!newAmount || newAmount <= 0) { setErr('اكتب مبلغ صحيح'); return; }
+    const newAmount = parseAmount(amt);
+    if (newAmount == null || newAmount <= 0) { setErr('اكتب مبلغ صحيح'); return; }
     if (!date) { setErr('تاريخ الشيك مطلوب'); return; }
 
     const { error } = await sb.from('collections')
