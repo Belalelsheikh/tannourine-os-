@@ -104,7 +104,9 @@ export default function RouteToday() {
         onDone={() => {
           bump();
           if (view.outlet.ordering_mode === 'central') setView({ k: 'list' });
-          else setView({ k: 'outlet', outletId: view.outlet.id, offRoute: false });
+          // Keep the visit's own off-route mark: a follow-on order or recount from this screen
+          // is still off the route if the visit was.
+          else setView({ k: 'outlet', outletId: view.outlet.id, offRoute: view.visit.off_route });
         }}
       />
     );
@@ -127,6 +129,36 @@ export default function RouteToday() {
     const checkedToday = doneOutletIds.has(o.id);
     const canOrder = o.ordering_mode !== 'central';
     const resumable = openVisit?.outlet_id === o.id;
+    // A second count of the same outlet on the same day is almost always a mis-tap on the
+    // screen the coordinator lands on after submitting — it shows up as a short visit for the
+    // supervisor to reject. Ask first, and lead with the order button once the count is done.
+    const repeat = checkedToday && !resumable;
+
+    const visitBtn = (
+      <button
+        key="visit"
+        className="rowbtn"
+        disabled={starting}
+        onClick={() => {
+          if (repeat && !window.confirm('الفرع ده اتجرد النهارده — تبدأ زيارة تانية؟')) return;
+          void startVisit(o, view.offRoute);
+        }}
+      >
+        <span>
+          <span className="nm">{resumable ? 'إكمال الزيارة المفتوحة' : repeat ? 'جرد تاني' : 'بدء الزيارة'}</span>
+          <span className="sub">رف · مخزن · بيع لكل صنف (تنورين + ڤيا)</span>
+        </span>
+        {checkedToday && <Pill tone="g">تمت</Pill>}
+      </button>
+    );
+    const orderBtn = canOrder && (
+      <button key="order" className="rowbtn" onClick={() => setView({ k: 'order', outlet: o })}>
+        <span>
+          <span className="nm">عمل أوردر</span>
+          <span className="sub">طلب كميات — يوصل لمسؤول الأوردرات</span>
+        </span>
+      </button>
+    );
 
     return (
       <>
@@ -143,26 +175,7 @@ export default function RouteToday() {
         {notice && <p className="small" style={{ marginBottom: 10 }}>{GPS_PRIVACY_LINE}</p>}
         <ErrLine>{err}</ErrLine>
 
-        <button
-          className="rowbtn"
-          disabled={starting}
-          onClick={() => void startVisit(o, view.offRoute)}
-        >
-          <span>
-            <span className="nm">{resumable ? 'إكمال الزيارة المفتوحة' : checkedToday ? 'جرد تاني' : 'بدء الزيارة'}</span>
-            <span className="sub">رف · مخزن · بيع لكل صنف (تنورين + ڤيا)</span>
-          </span>
-          {checkedToday && <Pill tone="g">تمت</Pill>}
-        </button>
-
-        {canOrder && (
-          <button className="rowbtn" onClick={() => setView({ k: 'order', outlet: o })}>
-            <span>
-              <span className="nm">عمل أوردر</span>
-              <span className="sub">طلب كميات — يوصل لمسؤول الأوردرات</span>
-            </span>
-          </button>
-        )}
+        {repeat ? <>{orderBtn}{visitBtn}</> : <>{visitBtn}{orderBtn}</>}
 
         <button className="ghost" onClick={() => setView({ k: 'list' })}>رجوع لخط اليوم</button>
       </>

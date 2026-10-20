@@ -83,6 +83,7 @@ export const FLAG_LABEL: Record<string, string> = {
   far_from_pin: 'بعيد عن الفرع',
   no_checkin_gps: 'بدون GPS عند البدء',
   no_checkout_gps: 'بدون GPS عند الإرسال',
+  unclosed: 'المشرف قفلها — ما اتبعتتش',
 };
 
 export const INVOICE_STATUS_LABEL: Record<string, string> = {
