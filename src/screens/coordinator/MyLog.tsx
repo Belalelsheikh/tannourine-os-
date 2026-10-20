@@ -1,24 +1,20 @@
 import { useApp, useQuery } from '../../lib/app';
 import { sb } from '../../lib/supabase';
-import { COLLECTION_STATUS_LABEL, FLAG_LABEL, dwellText, fmt, timeOf, todayISO } from '../../lib/format';
-import { Empty, Hint, Pill, Sect } from '../../components/ui';
-import type { Collection, Visit, VisitLine } from '../../lib/types';
+import { FLAG_LABEL, dwellText, timeOf, todayISO } from '../../lib/format';
+import { Empty, Hint, Pill } from '../../components/ui';
+import type { Visit, VisitLine } from '../../lib/types';
 
 export default function MyLog() {
   const { profile, outletById } = useApp();
 
-  const { data } = useQuery<{ visits: Visit[]; lines: VisitLine[]; cheques: Collection[] }>(
+  // Cheques left this screen in Oct 2026: supervisors collect them, coordinators never hold one.
+  const { data } = useQuery<{ visits: Visit[]; lines: VisitLine[] }>(
     async () => {
-      if (!profile) return { visits: [], lines: [], cheques: [] };
+      if (!profile) return { visits: [], lines: [] };
       const from = `${todayISO()}T00:00:00`;
-      const [v, c] = await Promise.all([
-        sb.from('visits').select('*').eq('coordinator_id', profile.id)
-          .gte('checkin_at', from).order('checkin_at', { ascending: false }),
-        sb.from('collections').select('*').eq('received_by', profile.id).eq('type', 'cheque')
-          .order('received_at', { ascending: false }).limit(30),
-      ]);
+      const v = await sb.from('visits').select('*').eq('coordinator_id', profile.id)
+        .gte('checkin_at', from).order('checkin_at', { ascending: false });
       if (v.error) throw v.error;
-      if (c.error) throw c.error;
       const visits = (v.data ?? []) as Visit[];
       let lines: VisitLine[] = [];
       if (visits.length) {
@@ -26,13 +22,11 @@ export default function MyLog() {
         if (l.error) throw l.error;
         lines = (l.data ?? []) as VisitLine[];
       }
-      return { visits, lines, cheques: (c.data ?? []) as Collection[] };
+      return { visits, lines };
     },
     [profile?.id],
-    { visits: [], lines: [], cheques: [] },
+    { visits: [], lines: [] },
   );
-
-  const custody = data.cheques.filter((c) => c.status === 'received');
 
   return (
     <>
@@ -67,16 +61,6 @@ export default function MyLog() {
           </div>
         );
       })}
-
-      <Sect>شيكات في عهدتي ({custody.length})</Sect>
-      {custody.length === 0 && <Empty>مفيش شيكات في عهدتك</Empty>}
-      {custody.map((c) => (
-        <div className="card" key={c.id}>
-          <b>{outletById(c.outlet_id)?.name ?? '؟'}</b> — <span className="mono">{fmt(c.amount)}</span> ج
-          <br />
-          <span className="small">تاريخ الشيك {c.cheque_date} · {COLLECTION_STATUS_LABEL[c.status]}</span>
-        </div>
-      ))}
     </>
   );
 }

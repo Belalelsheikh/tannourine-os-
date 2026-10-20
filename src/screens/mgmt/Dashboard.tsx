@@ -95,7 +95,7 @@ export default function Dashboard({
         <br />
         <b className="mono" style={{ fontSize: 22 }}>{fmt(totalOpen)} ج</b>
         <br />
-        <span className="small">منها {fmt(custodyAmount)} ج شيكات لسه في عهدة المنسقين</span>
+        <span className="small">منها {fmt(custodyAmount)} ج شيكات لسه في عهدة المشرفين</span>
       </div>
 
       {silent.length > 0 && (

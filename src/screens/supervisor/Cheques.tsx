@@ -1,23 +1,37 @@
 import { useState } from 'react';
 import { useApp, useQuery } from '../../lib/app';
 import { sb, errText } from '../../lib/supabase';
-import { fmt, todayISO } from '../../lib/format';
+import { COLLECTION_STATUS_LABEL, daysSince, fmt, todayISO } from '../../lib/format';
 import { parseAmount } from '../../lib/numerals';
-import { ActionButton, Empty, ErrLine, Field, Hint } from '../../components/ui';
+import { ActionButton, Empty, ErrLine, Field, Sect } from '../../components/ui';
 import type { Collection, InvoiceOpen } from '../../lib/types';
 
 /**
- * Coordinator cheque intake — PRD §8. Custody starts here: received_by is the
- * coordinator until finance banks it.
+ * Cheque intake — PRD §8, changed Oct 2026: supervisors collect cheques from branches,
+ * coordinators do not. Custody starts here: received_by is the supervisor until finance
+ * banks it. RLS (col_ins_sup) only lets a supervisor insert a cheque in their own name.
  */
-export default function CoordCheques() {
-  const { profile, outlets, toast, bump } = useApp();
+export default function SupCheques() {
+  const { profile, outlets, outletById, toast, bump } = useApp();
   const [outletId, setOutletId] = useState<number | null>(null);
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [dates, setDates] = useState<Record<string, string>>({});
   const [err, setErr] = useState<string | null>(null);
 
   const chequeOutlets = outlets.filter((o) => o.payment_path !== 'transfer');
+
+  const { data: custody } = useQuery<Collection[]>(
+    async () => {
+      if (!profile) return [];
+      const { data, error } = await sb.from('collections').select('*')
+        .eq('received_by', profile.id).eq('type', 'cheque').eq('status', 'received')
+        .order('received_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as Collection[];
+    },
+    [profile?.id],
+    [],
+  );
 
   const { data: open } = useQuery<InvoiceOpen[]>(
     async () => {
@@ -61,7 +75,19 @@ export default function CoordCheques() {
 
   return (
     <>
-      <Hint>تسجيل استلام شيك من فرع</Hint>
+      <Sect>شيكات في عهدتي ({custody.length})</Sect>
+      {custody.length === 0 && <Empty>مفيش شيكات في عهدتك</Empty>}
+      {custody.map((c) => (
+        <div className="card" key={c.id}>
+          <b>{outletById(c.outlet_id)?.name ?? '؟'}</b> — <span className="mono">{fmt(c.amount)}</span> ج
+          <br />
+          <span className="small">
+            تاريخ الشيك {c.cheque_date} · {COLLECTION_STATUS_LABEL[c.status]} من {daysSince(c.received_at)} يوم
+          </span>
+        </div>
+      ))}
+
+      <Sect>تسجيل استلام شيك من فرع</Sect>
       <Field label="الفرع">
         <select
           value={outletId ?? ''}

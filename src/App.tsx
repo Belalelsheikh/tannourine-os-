@@ -7,11 +7,11 @@ import type { Profile, Role } from './lib/types';
 import Login from './components/Login';
 
 import RouteToday from './screens/coordinator/RouteToday';
-import CoordCheques from './screens/coordinator/Cheques';
 import MyLog from './screens/coordinator/MyLog';
 import Feed from './screens/supervisor/Feed';
 import TeamNow from './screens/supervisor/TeamNow';
 import Followups from './screens/supervisor/Followups';
+import SupCheques from './screens/supervisor/Cheques';
 import Intake from './screens/router/Intake';
 import Board from './screens/router/Board';
 import ToInvoice from './screens/invoice/ToInvoice';
@@ -45,13 +45,13 @@ const visitsTab: Tab = {
 const TABS: Record<Role, Tab[]> = {
   coordinator: [
     { id: 'route', label: 'خط اليوم', render: () => <RouteToday /> },
-    { id: 'chq', label: 'الشيكات', render: () => <CoordCheques /> },
     { id: 'mylog', label: 'سجلّي', render: () => <MyLog /> },
   ],
   supervisor: [
     { id: 'feed', label: 'المتابعة', render: () => <Feed /> },
     { id: 'now', label: 'الفريق الآن', render: () => <TeamNow /> },
     { id: 'fups', label: 'تنبيهات', render: () => <Followups /> },
+    { id: 'chq', label: 'الشيكات', render: () => <SupCheques /> },
   ],
   router: [
     { id: 'intake', label: 'تسجيل وارد', render: () => <Intake /> },

@@ -44,6 +44,12 @@ How an outlet's orders originate — `rep` (the coordinator raises it in-visit),
 How an outlet settles: `cheque`, `transfer`, or `unknown` where it has never been
 established. Circle K's 121 outlets are all currently `unknown`.
 
+**Cheque custody**:
+Who holds a branch's cheque from collection until finance banks it. Supervisors collect
+cheques; coordinators never receive one (decided 2026-10-20, replacing PRD §8's coordinator
+custody). Only a supervisor can log a cheque, in their own name (`col_ins_sup`).
+_Avoid_: coordinator custody, منسق cheques
+
 **Alexandria supervision**:
 محمد عبد الحميد (coordinator, `الإسكندرية`) is supervised by مروه (role `supervisor`, scope
 `الكل`), confirmed against the live database on 2026-09-14. She reaches him through the
