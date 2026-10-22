@@ -3,6 +3,7 @@ import { sb } from '../../lib/supabase';
 import { coordinatorsInScope } from '../../lib/scope';
 import { fmt, timeOf, todayISO } from '../../lib/format';
 import { cairoDateOf } from '../../lib/cairo';
+import { photoRateByCoordinator } from '../../lib/review';
 import { Empty, Hint, Sect, StatTiles } from '../../components/ui';
 import TeamNow from '../supervisor/TeamNow';
 import type { BookStock, Collection, InvoiceOpen, Visit, VisitLine } from '../../lib/types';
@@ -74,6 +75,14 @@ export default function Dashboard({
   );
   const custodyAmount = data.custody.reduce((a, c) => a + Number(c.amount), 0);
   const totalOpen = data.open.reduce((a, i) => a + Number(i.open_amount), 0);
+  // Lowest photo rate first — that's who to ask about it.
+  const rates = photoRateByCoordinator(data.visits);
+  const photoRows = team
+    .flatMap((c) => {
+      const r = rates.get(c.id);
+      return r ? [{ c, ...r, pct: Math.round((r.withPhoto / r.total) * 100) }] : [];
+    })
+    .sort((a, b) => a.pct - b.pct || a.c.full_name.localeCompare(b.c.full_name, 'ar'));
 
   return (
     <>
@@ -103,6 +112,25 @@ export default function Dashboard({
           <b>بدون زيارات اليوم:</b>
           <br />
           <span className="small">{silent.map((s) => s.full_name).join(' · ')}</span>
+        </div>
+      )}
+
+      <Sect>المنسقين النهارده</Sect>
+      {photoRows.length === 0 && <Empty>مفيش زيارات اتبعتت لسه</Empty>}
+      {photoRows.length > 0 && (
+        <div className="tscroll">
+          <table className="t">
+            <thead><tr><th>المنسق</th><th>زيارات</th><th>% بصورة</th></tr></thead>
+            <tbody>
+              {photoRows.map((r) => (
+                <tr key={r.c.id}>
+                  <td>{r.c.full_name}</td>
+                  <td className="mono">{fmt(r.total)}</td>
+                  <td className="mono" style={r.pct < 50 ? { color: 'var(--crit)' } : undefined}>{r.pct}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 

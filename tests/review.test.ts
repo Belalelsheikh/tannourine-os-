@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ageLabel, calendarDaysAgo, closeUnfinishedPatch, reviewQueue } from '../src/lib/review.ts';
+import { ageLabel, calendarDaysAgo, closeUnfinishedPatch, missingPhoto, photoRateByCoordinator, reviewQueue } from '../src/lib/review.ts';
 import type { Visit } from '../src/lib/types.ts';
 
 const visit = (p: Partial<Visit>): Visit => ({
@@ -51,4 +51,22 @@ test('closeUnfinishedPatch checks the visit out as flagged without inventing a d
 test('closeUnfinishedPatch does not duplicate the unclosed flag', () => {
   const p = closeUnfinishedPatch(visit({ checkout_at: null, flags: ['unclosed'] }), 'sup', new Date());
   assert.deepEqual(p.flags, ['unclosed']);
+});
+
+test('missingPhoto flags submitted visits without a photo, not open or supervisor-closed ones', () => {
+  assert.equal(missingPhoto(visit({})), true);
+  assert.equal(missingPhoto(visit({ photo_path: 'v.jpg' })), false);
+  assert.equal(missingPhoto(visit({ checkout_at: null })), false);
+  assert.equal(missingPhoto(visit({ flags: ['unclosed'] })), false);
+});
+
+test('photoRateByCoordinator counts only submitted visits', () => {
+  const r = photoRateByCoordinator([
+    visit({ id: '1', coordinator_id: 'a', photo_path: '1.jpg' }),
+    visit({ id: '2', coordinator_id: 'a' }),
+    visit({ id: '3', coordinator_id: 'a', checkout_at: null }),
+    visit({ id: '4', coordinator_id: 'b', flags: ['unclosed'] }),
+  ]);
+  assert.deepEqual(r.get('a'), { total: 2, withPhoto: 1 });
+  assert.equal(r.has('b'), false);
 });

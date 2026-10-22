@@ -38,3 +38,24 @@ export function closeUnfinishedPatch(v: Visit, reviewerId: string, now = new Dat
     flags: v.flags.includes('unclosed') ? v.flags : [...v.flags, 'unclosed'],
   };
 }
+
+/** A visit the coordinator actually submitted — the supervisor's «قفل الزيارة» doesn't count. */
+const submitted = (v: Visit) => v.checkout_at != null && !v.flags.includes('unclosed');
+
+/** Shelf photo is optional: a submitted visit without one gets the «بدون صورة» chip. */
+export function missingPhoto(v: Visit): boolean {
+  return submitted(v) && v.photo_path == null;
+}
+
+/** Submitted visits and how many carry a shelf photo, per coordinator. */
+export function photoRateByCoordinator(visits: Visit[]): Map<string, { total: number; withPhoto: number }> {
+  const out = new Map<string, { total: number; withPhoto: number }>();
+  for (const v of visits) {
+    if (!submitted(v)) continue;
+    const r = out.get(v.coordinator_id) ?? { total: 0, withPhoto: 0 };
+    r.total += 1;
+    if (v.photo_path != null) r.withPhoto += 1;
+    out.set(v.coordinator_id, r);
+  }
+  return out;
+}

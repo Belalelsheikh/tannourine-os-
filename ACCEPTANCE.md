@@ -60,7 +60,7 @@ it is the entire input to مروه's تنبيهات queue.
 
 **Manual steps:** log in as `nada`, open a routed branch, tap «بدء الزيارة», allow location,
 leave one field blank → expect «في خانات فاضية»; set a shelf to 0 without a chip → expect
-«حدد سبب الصفر»; remove the photo → expect «صورة الرف مطلوبة»; then complete and submit.
+«حدد سبب الصفر»; submit once without a photo → succeeds, supervisor sees «بدون صورة»; then complete with a photo and submit.
 
 ## §15.2 — Supervisor: feed, badges, pin on approval, silent banner, 4h unclosed
 
