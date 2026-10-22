@@ -49,13 +49,16 @@ export default function VisitForm({
         return;
       }
     }
-    if (!photo) { setErr('صورة الرف مطلوبة'); return; }
 
     setBusy(true);
     try {
-      // 1) photo (upsert: a retry overwrites instead of colliding)
-      const photoPath = `${visit.id}.jpg`;
-      await uploadPhoto(BUCKET_VISITS, photoPath, photo);
+      // 1) photo is optional; when given, upsert so a retry overwrites instead of colliding.
+      // No photo → photo_path stays null and «المتابعة» shows «بدون صورة» for the supervisor.
+      let photoPath: string | null = null;
+      if (photo) {
+        photoPath = `${visit.id}.jpg`;
+        await uploadPhoto(BUCKET_VISITS, photoPath, photo);
+      }
 
       // 2) lines (upsert on the composite PK so a replay is idempotent)
       const rows = skus.map((s) => ({
@@ -181,7 +184,7 @@ export default function VisitForm({
       })}
 
       <PhotoPicker
-        label="📷 صورة الرف (مطلوبة)"
+        label="📷 صورة الرف (اختياري)"
         blob={photo}
         onPick={setPhoto}
         onError={(m) => setErr(m)}

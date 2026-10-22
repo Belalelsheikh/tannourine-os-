@@ -3,7 +3,7 @@ import { useApp, useQuery } from '../../lib/app';
 import { sb, errText, BUCKET_VISITS } from '../../lib/supabase';
 import { coordinatorsInScope } from '../../lib/scope';
 import { FLAG_LABEL, dwellText, fmt, stampOf, timeOf, todayISO } from '../../lib/format';
-import { ageLabel, calendarDaysAgo, closeUnfinishedPatch, reviewQueue } from '../../lib/review';
+import { ageLabel, calendarDaysAgo, closeUnfinishedPatch, missingPhoto, reviewQueue } from '../../lib/review';
 import { ActionButton, Empty, ErrLine, Pill, SecureImage, Sect } from '../../components/ui';
 import type { Visit, VisitLine } from '../../lib/types';
 
@@ -138,9 +138,11 @@ export default function Feed() {
           )
           : <Pill tone="g">متوفر</Pill>}
 
-        {v.flags.length > 0 && (
+        {(v.flags.length > 0 || missingPhoto(v)) && (
           <div className="btnrow">
             {v.flags.map((f) => <Pill key={f} tone="y">{FLAG_LABEL[f] ?? f}</Pill>)}
+            {/* Informs only — the supervisor decides; nothing auto-rejects a photo-less visit. */}
+            {missingPhoto(v) && <Pill tone="y">بدون صورة</Pill>}
           </div>
         )}
 
