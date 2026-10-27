@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp, useQuery } from '../../lib/app';
-import { sb, BUCKET_VISITS } from '../../lib/supabase';
-import { addDays, cairoDateOf, cairoDayRange, cairoTime, cairoToday, weekdayOf } from '../../lib/cairo';
-import { DAY_LABELS, FLAG_LABEL, ORDER_STATUS_LABEL, fmt } from '../../lib/format';
+import { sb } from '../../lib/supabase';
+import { addDays, cairoDayRange, cairoTime, cairoToday, weekdayOf } from '../../lib/cairo';
+import { DAY_LABELS } from '../../lib/format';
 import { daySections, zeroSummary, type DaySection } from '../../lib/visitsDay';
-import { Empty, ErrLine, Hint, Pill, SecureImage, Sect } from '../../components/ui';
+import { Empty, ErrLine, Hint, Pill, Sect } from '../../components/ui';
+import { VisitDetail, minutes, visitStatus } from '../../components/VisitDetail';
 import type {
   Followup, Order, OrderLine, RouteRow, Visit, VisitLine,
 } from '../../lib/types';
@@ -30,22 +31,13 @@ async function inIds<T>(table: string, col: string, ids: string[]): Promise<T[]>
   return (data ?? []) as T[];
 }
 
-const STATUS: Record<string, { label: string; tone: 'r' | 'g' | 'y' | 'n' }> = {
-  open: { label: 'لسه مفتوحة', tone: 'n' },
-  pending: { label: 'مستنية', tone: 'y' },
-  approved: { label: 'اتعتمدت', tone: 'g' },
-  flagged: { label: 'اترفضت', tone: 'r' },
-};
-
-const minutes = (s: number | null) => (s == null ? '—' : `${Math.round(s / 60)} د`);
-
 /**
  * «الزيارات» — what each coordinator actually recorded on one Cairo day: per-SKU counts and
  * zero reasons, what was planned and missed, and what followed (review, follow-up, order).
  * Read-only for every role that has it; reviewing stays in «المتابعة».
  */
 export default function Visits({ focus, onFocusDone }: { focus?: VisitFocus | null; onFocusDone?: () => void }) {
-  const { profiles, skus, outletById, skuById, profileById } = useApp();
+  const { profiles, outletById, skuById, profileById } = useApp();
   const [day, setDay] = useState(() => focus?.day ?? cairoToday());
   const [chip, setChip] = useState('الكل');
   const [open, setOpen] = useState<Set<string>>(() => new Set(focus ? [focus.visitId] : []));
@@ -111,10 +103,6 @@ export default function Visits({ focus, onFocusDone }: { focus?: VisitFocus | nu
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
   };
-  const stamp = (ts: string) => {
-    const d = cairoDateOf(ts);
-    return `${d === day ? '' : `${d.slice(8, 10)}/${d.slice(5, 7)} `}${cairoTime(ts)}`;
-  };
   const outletLabel = (id: number) => {
     const o = outletById(id);
     return o ? `${o.chain} ${o.name}` : '؟';
@@ -122,7 +110,7 @@ export default function Visits({ focus, onFocusDone }: { focus?: VisitFocus | nu
 
   const VisitCard = ({ v }: { v: Visit }) => {
     const isOpen = open.has(v.id);
-    const st = STATUS[v.checkout_at == null ? 'open' : v.status];
+    const st = visitStatus(v);
     const lines = data.lines.filter((l) => l.visit_id === v.id);
     const zeroCount = lines.filter((l) => l.shelf === 0).length;
     const fu = data.followups.filter((f) => f.visit_id === v.id);
@@ -151,86 +139,15 @@ export default function Visits({ focus, onFocusDone }: { focus?: VisitFocus | nu
         </button>
 
         {isOpen && (
-          <div className="vbody">
-            {lines.length === 0 ? (
-              <p className="small">لسه ما اتبعتتش — مفيش جرد متسجل.</p>
-            ) : (
-              <div className="tscroll">
-                <table className="t">
-                  <thead>
-                    <tr><th>الصنف</th><th>رف</th><th>مخزن</th><th>بيع</th><th>سبب الصفر</th></tr>
-                  </thead>
-                  <tbody>
-                    {skus.map((s) => {
-                      const l = lines.find((x) => x.sku_id === s.id);
-                      const dry = l != null && l.shelf === 0 && l.warehouse === 0;
-                      return (
-                        <tr key={s.id} className={dry ? 'crit' : ''}>
-                          <td>{s.name_ar}</td>
-                          <td className="mono">{l ? l.shelf : '—'}</td>
-                          <td className="mono">{l ? l.warehouse : '—'}</td>
-                          <td className="mono">{l ? l.sold_cases : '—'}</td>
-                          <td>{l?.zero_reason ?? ''}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            <p className="small">
-              من <span className="mono">{cairoTime(v.checkin_at)}</span>
-              {v.checkout_at ? <> لـ <span className="mono">{cairoTime(v.checkout_at)}</span></> : ' — لسه مفتوحة'}
-              {' · '}مدة {minutes(v.dwell_seconds)}
-              <br />
-              GPS البدء {v.checkin_lat != null ? '✓' : '✗'} · الإرسال{' '}
-              {v.checkout_at == null ? '—' : v.checkout_lat != null ? '✓' : '✗'}
-              {' · '}
-              {v.distance_m == null ? 'الموقع لسه ما اتحددش' : `${fmt(v.distance_m)} م من الفرع`}
-            </p>
-
-            {v.flags.length > 0 && (
-              <div className="btnrow">
-                {v.flags.map((f) => <Pill key={f} tone="y">{FLAG_LABEL[f] ?? f}</Pill>)}
-              </div>
-            )}
-
-            <p className="small" style={{ marginTop: 8 }}>
-              {v.reviewed_by
-                ? <>راجعها {profileById(v.reviewed_by)?.full_name ?? '؟'}{v.reviewed_at ? ` · ${stamp(v.reviewed_at)}` : ''}</>
-                : v.checkout_at == null ? 'لسه ما اتبعتتش للمراجعة' : 'لسه ما اتراجعتش'}
-            </p>
-
-            {fu.map((f) => (
-              <p className="small" key={f.id}>
-                {f.status === 'done'
-                  ? <>المتابعة مع السلسلة اتقفلت — {profileById(f.done_by)?.full_name ?? '؟'}{f.done_at ? ` · ${stamp(f.done_at)}` : ''}</>
-                  : <>متابعة مع السلسلة مفتوحة — لسه محدش قفلها</>}
-              </p>
-            ))}
-
-            {orders.length > 0 ? orders.map((o) => (
-              <div className="small" key={o.id} style={{ marginTop: 4 }}>
-                <Pill tone={o.status === 'rejected' ? 'r' : o.status === 'pending' ? 'y' : 'g'}>
-                  أوردر · {ORDER_STATUS_LABEL[o.status] ?? o.status}
-                </Pill>{' '}
-                {data.orderLines.filter((l) => l.order_id === o.id)
-                  .sort((a, b) => skus.findIndex((s) => s.id === a.sku_id) - skus.findIndex((s) => s.id === b.sku_id))
-                  .map((l) => `${skuById(l.sku_id)?.name_ar ?? l.sku_id}: ${l.cases}`).join(' · ')}
-              </div>
-            )) : zeroCount > 0 && <p className="small" style={{ color: 'var(--crit)' }}>مفيش أوردر اتعمل</p>}
-
-            {v.photo_path && (
-              photos.has(v.id)
-                ? <SecureImage bucket={BUCKET_VISITS} path={v.photo_path} />
-                : (
-                  <div className="btnrow">
-                    <button className="mini" onClick={() => setPhotos((s) => toggle(s, v.id))}>شوف صورة الرف</button>
-                  </div>
-                )
-            )}
-          </div>
+          <VisitDetail
+            v={v}
+            lines={lines}
+            followups={fu}
+            orders={orders}
+            orderLines={data.orderLines}
+            photoShown={photos.has(v.id)}
+            onShowPhoto={() => setPhotos((s) => toggle(s, v.id))}
+          />
         )}
       </div>
     );

@@ -238,3 +238,28 @@ Code complete: `src/screens/supervisor/TeamNow.tsx`, embedded into **اللوح�
 Work through `README-DEPLOY.md` Steps 1–9, then re-run this document top to bottom. The single
 highest-value check afterwards is **§15.7** — it is the only one that tests the v1.1/v1.2 patches
 directly, and it is the one a UI walkthrough cannot substitute for.
+
+---
+
+## Supervisor «الزيارات» — visits history (27 Oct 2026)
+
+Branch `feat/supervisor-visits`. Read-only; no migration, no RLS change (`visits_sel` already
+lets supervisors read every row). History scope goes by `profiles.scope` only
+(`historyCoordinators()`), not by `supervisor_id`.
+
+Walked on screen as مروه on `localhost:5173` (27 Oct, ~13:30 Cairo), against the live project.
+The data moved since the brief: more visits came in during the day.
+
+| # | Item | Result |
+|---|---|---|
+| 1 | مروه sees the tab and ≥ 100 visits | **PASS on «الكل» range** — tab sits after «تنبيهات»; «الكل» shows **126**. The default «آخر 7 أيام» shows **92**, so ≥ 100 holds only on the all-time range. |
+| 2 | Coordinator filter / status=approved | **PASS** — محمد عبد الحميد → 12, every row his; «اتعتمدت» → 74 of 126 («مستنية» 27 incl. open visits, «اترفضت» 25). He has no approved visits, so the two combined are empty. The coordinator list has all 8 coordinators incl. the deactivated محمد عبد الباسط. |
+| 3 | Approved visit opens full detail | **PASS** — e.g. Seoudi الدقى 26/10 (رنا): SKU shelf/warehouse/sold with zero reasons, times, GPS, «راجعها محمد رجب · 15:15», order line, photo loads on tap. |
+| 4 | Coordinator sees only own visits | **PASS** — coordinator tabs and RLS untouched. |
+| 5 | No write path | **PASS** — every call the page made was logged with a fetch wrapper. REST: only `GET` on `visits`, `followups`, `orders`. The one non-GET is `POST /storage/v1/object/sign/visit-photos/…` when a photo is opened: it creates a signed read URL and writes nothing. |
+
+Also checked: «سجل الفرع» (Gourmet الدقى) shows 5 visits, «آخر زيارة من 1 يوم», and the gap to
+the previous visit on each row. A pending visit's «راجعها في المتابعة ←» switches to «المتابعة».
+
+**Not checked:** a Cairo supervisor (حسام) seeing all القاهرة coordinators — covered by
+`tests/visitsHistory.test.ts`, not walked on screen.
