@@ -12,6 +12,7 @@ import Feed from './screens/supervisor/Feed';
 import TeamNow from './screens/supervisor/TeamNow';
 import Followups from './screens/supervisor/Followups';
 import SupCheques from './screens/supervisor/Cheques';
+import SupVisits from './screens/supervisor/Visits';
 import Intake from './screens/router/Intake';
 import Board from './screens/router/Board';
 import ToInvoice from './screens/invoice/ToInvoice';
@@ -27,9 +28,13 @@ import RoutesBuilder from './screens/mgmt/RoutesBuilder';
 import OutletsEditor from './screens/mgmt/Outlets';
 import Visits, { type VisitFocus } from './screens/mgmt/Visits';
 
-/** Cross-tab navigation: the dashboard opens a visit on the «الزيارات» tab. */
+/**
+ * Cross-tab navigation: the dashboard opens a visit on the «الزيارات» tab; the supervisor's
+ * history sends a pending visit to «المتابعة» for review.
+ */
 interface Nav {
   openVisit: (visitId: string, day: string) => void;
+  openFeed: () => void;
   focus: VisitFocus | null;
   clearFocus: () => void;
 }
@@ -51,6 +56,7 @@ const TABS: Record<Role, Tab[]> = {
     { id: 'feed', label: 'المتابعة', render: () => <Feed /> },
     { id: 'now', label: 'الفريق الآن', render: () => <TeamNow /> },
     { id: 'fups', label: 'تنبيهات', render: () => <Followups /> },
+    { id: 'visits', label: 'الزيارات', render: (nav) => <SupVisits onOpenFeed={nav.openFeed} /> },
     { id: 'chq', label: 'الشيكات', render: () => <SupCheques /> },
   ],
   router: [
@@ -129,6 +135,7 @@ export default function App() {
   const badges = useBadges(profile, profiles);
   const nav: Nav = {
     openVisit: (visitId, day) => { setVisitFocus({ visitId, day }); setTabId('visits'); },
+    openFeed: () => setTabId('feed'),
     focus: visitFocus,
     clearFocus: () => setVisitFocus(null),
   };

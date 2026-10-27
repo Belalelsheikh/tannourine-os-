@@ -238,3 +238,25 @@ Code complete: `src/screens/supervisor/TeamNow.tsx`, embedded into **اللوح�
 Work through `README-DEPLOY.md` Steps 1–9, then re-run this document top to bottom. The single
 highest-value check afterwards is **§15.7** — it is the only one that tests the v1.1/v1.2 patches
 directly, and it is the one a UI walkthrough cannot substitute for.
+
+---
+
+## Supervisor «الزيارات» — visits history (27 Oct 2026)
+
+Branch `feat/supervisor-visits`. Read-only; no migration, no RLS change (`visits_sel` already
+lets supervisors read every row). History scope goes by `profiles.scope` only
+(`historyCoordinators()`), not by `supervisor_id`.
+
+Counts below were checked with SQL run as مروه (`role authenticated` + her `sub`), which is the
+same RLS context the screen queries in. The data moved since the brief (one more pending visit).
+
+| # | Item | Result |
+|---|---|---|
+| 1 | مروه sees the tab and ≥ 100 visits | **PASS on «الكل» range** — 123 visits (74 approved, 25 pending incl. 2 open, 24 rejected). The default «آخر 7 أيام» shows **89**, so ≥ 100 holds only with the all-time preset. |
+| 2 | Coordinator filter / status=approved | **PASS (data)** — محمد عبد الحميد → 12 (10 pending, 2 rejected); status «اتعتمدت» alone → 74. The two combined are empty: he has no approved visits. |
+| 3 | Approved visit opens full detail | **PASS (code)** — same `VisitDetail` as the mgmt screen: SKU shelf/warehouse/sold/zero reason, photo on tap, orders, follow-ups, reviewer + `reviewed_at`. |
+| 4 | Coordinator sees only own visits | **PASS** — coordinator tabs and RLS untouched. |
+| 5 | No write path | **PASS (code)** — every REST call is a `select`. A photo tap calls storage `createSignedUrl`, which is a POST to `/storage/v1/object/sign/…` — read-only, but not a SELECT, so it shows in the network tab. |
+
+**Still manual:** the UI walk logged in as marwa@tannourine.local (items 1–3 on screen, 5 in the
+network tab), and a Cairo supervisor (حسام) to confirm they see all القاهرة coordinators.
