@@ -4,7 +4,7 @@ import { sb } from '../../lib/supabase';
 import { addDays, cairoDateOf, cairoDayRange, cairoTime, cairoToday, weekdayOf } from '../../lib/cairo';
 import { DAY_LABELS, FLAG_LABEL } from '../../lib/format';
 import {
-  cairoRange, dayDiff, filterVisits, historyCoordinators, lastWeek, outletTimeline, zeroCount,
+  cairoRange, dayDiff, filterVisits, groupByCoordinator, historyCoordinators, lastWeek, outletTimeline, zeroCount,
   type HistoryFilter, type VisitWithLines,
 } from '../../lib/visitsHistory';
 import { Empty, ErrLine, Field, Hint, Pill, Sect, Segmented } from '../../components/ui';
@@ -91,9 +91,11 @@ function RowDetail({ v, onOpenOutlet, onOpenFeed }: {
   );
 }
 
-function Row({ v, gap, open, onToggle, onOpenOutlet, onOpenFeed }: {
+function Row({ v, gap, hideCoordinator, open, onToggle, onOpenOutlet, onOpenFeed }: {
   v: VisitWithLines;
   gap?: number | null;
+  /** Inside a coordinator's group the name is already in the heading. */
+  hideCoordinator?: boolean;
   open: boolean;
   onToggle: () => void;
   onOpenOutlet?: () => void;
@@ -112,7 +114,8 @@ function Row({ v, gap, open, onToggle, onOpenOutlet, onOpenFeed }: {
           <b><bdi>{o ? `${o.chain} ${o.name}` : '؟'}</bdi></b>
           <br />
           <span className="small">
-            <span className="mono">{label(v.checkin_at)}</span> · {profileById(v.coordinator_id)?.full_name ?? '؟'}
+            <span className="mono">{label(v.checkin_at)}</span>
+            {!hideCoordinator && <> · {profileById(v.coordinator_id)?.full_name ?? '؟'}</>}
             {gap != null && <> · بعد <span className="mono">{gap}</span> يوم من اللي قبلها</>}
           </span>
           <br />
@@ -135,7 +138,7 @@ function Row({ v, gap, open, onToggle, onOpenOutlet, onOpenFeed }: {
  * reviewing stays in «المتابعة». Who is in the area: see `historyCoordinators()`.
  */
 export default function SupervisorVisits({ onOpenFeed }: { onOpenFeed: () => void }) {
-  const { profile, profiles, outlets, outletById } = useApp();
+  const { profile, profiles, outlets, outletById, profileById } = useApp();
   const [range, setRange] = useState<RangeKey>('آخر 7 أيام');
   const [custom, setCustom] = useState(() => lastWeek(cairoToday()));
   const [f, setF] = useState<HistoryFilter>(NO_FILTER);
@@ -176,6 +179,7 @@ export default function SupervisorVisits({ onOpenFeed }: { onOpenFeed: () => voi
   );
 
   const shown = useMemo(() => filterVisits(list.data, f, outletById), [list.data, f, outletById]);
+  const groups = useMemo(() => groupByCoordinator(shown), [shown]);
   const toggle = (id: string) => setOpen((s) => {
     const next = new Set(s);
     if (next.has(id)) next.delete(id); else next.add(id);
@@ -275,16 +279,29 @@ export default function SupervisorVisits({ onOpenFeed }: { onOpenFeed: () => voi
       )}
       {!list.loading && shown.length === 0 && <Empty>مفيش زيارات بالفلاتر دي</Empty>}
 
-      {shown.map((v) => (
-        <Row
-          key={v.id}
-          v={v}
-          open={open.has(v.id)}
-          onToggle={() => toggle(v.id)}
-          onOpenOutlet={() => setDrill(v.outlet_id)}
-          onOpenFeed={onOpenFeed}
-        />
-      ))}
+      {groups.map((g) => {
+        const c = profileById(g.coordinatorId);
+        const zeros = g.visits.reduce((n, v) => n + zeroCount(v.visit_lines), 0);
+        return (
+          <div key={g.coordinatorId}>
+            <Sect>
+              {c?.full_name ?? '؟'}{c && !c.active && ' (موقوف)'} · <span className="mono">{g.visits.length}</span> زيارة
+              {zeros > 0 && <> · <span className="mono">{zeros}</span> صنف صفر</>}
+            </Sect>
+            {g.visits.map((v) => (
+              <Row
+                key={v.id}
+                v={v}
+                hideCoordinator
+                open={open.has(v.id)}
+                onToggle={() => toggle(v.id)}
+                onOpenOutlet={() => setDrill(v.outlet_id)}
+                onOpenFeed={onOpenFeed}
+              />
+            ))}
+          </div>
+        );
+      })}
 
       <Hint>الأيام والأوقات بتوقيت القاهرة.</Hint>
     </>

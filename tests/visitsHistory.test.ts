@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  cairoRange, dayDiff, filterVisits, historyCoordinators, lastWeek, outletTimeline, zeroCount,
+  cairoRange, dayDiff, filterVisits, groupByCoordinator, historyCoordinators, lastWeek, outletTimeline, zeroCount,
 } from '../src/lib/visitsHistory.ts';
 import type { Outlet, Profile, Scope, Visit, VisitLine } from '../src/lib/types.ts';
 
@@ -84,4 +84,18 @@ test('outletTimeline is newest first with gaps in Cairo days', () => {
     visit('y', 'rana', 0, '2026-10-24T12:00:00Z'),
   ]);
   assert.deepEqual(t.map((e) => [e.visit.id, e.gap]), [['y', 0], ['x', 9], ['w', null]]);
+});
+
+test('groupByCoordinator: latest-active coordinator first, each group newest first', () => {
+  const g = groupByCoordinator([
+    visit('r1', 'rana', 0, '2026-10-21T08:00:00Z'),
+    visit('a1', 'alex', 1, '2026-10-22T08:00:00Z'),
+    visit('r2', 'rana', 1, '2026-10-23T08:00:00Z'),
+    visit('a2', 'alex', 0, '2026-10-20T08:00:00Z'),
+  ]);
+  assert.deepEqual(g.map((x) => [x.coordinatorId, x.visits.map((v) => v.id)]), [
+    ['rana', ['r2', 'r1']],
+    ['alex', ['a1', 'a2']],
+  ]);
+  assert.deepEqual(groupByCoordinator([]), []);
 });
