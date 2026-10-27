@@ -30,6 +30,8 @@ export default function Intake() {
       const ins = await sb.from('orders').insert({
         outlet_id: outletId,
         source: 'email',
+        // Email orders skip the supervisor step and land in this desk's own final queue.
+        status: 'leader_approved',
         po_number: po.trim() || null,
         created_by: profile.id,
       }).select('id').single();
@@ -40,7 +42,7 @@ export default function Intake() {
       );
       if (lineRes.error) throw lineRes.error;
 
-      toast('اتسجل الأوردر');
+      toast('اتسجل الأوردر — مستني اعتمادك النهائي في «الأوردرات»');
       setLines({});
       setPo('');
       setOutletId(null);

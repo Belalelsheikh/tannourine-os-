@@ -1,8 +1,54 @@
 import { useApp, useQuery } from '../../lib/app';
 import { sb } from '../../lib/supabase';
-import { FLAG_LABEL, dwellText, timeOf, todayISO } from '../../lib/format';
-import { Empty, Hint, Pill } from '../../components/ui';
-import type { Visit, VisitLine } from '../../lib/types';
+import { FLAG_LABEL, ORDER_STATUS_LABEL, dwellText, stampOf, timeOf, todayISO } from '../../lib/format';
+import { linesToMap, type OrderWithLines } from '../../lib/orders';
+import { linesText } from '../../components/OrderLines';
+import { Empty, Hint, Pill, Sect } from '../../components/ui';
+import type { Order, OrderLine, Visit, VisitLine } from '../../lib/types';
+
+const ORDER_TONE: Record<Order['status'], 'r' | 'g' | 'y' | 'n'> = {
+  pending: 'y', leader_approved: 'y', approved: 'g', invoiced: 'g', rejected: 'r', cancelled: 'r',
+};
+
+/** Orders this coordinator placed in the last week, with where each one stands. */
+function MyOrders() {
+  const { profile, outletById, skuById } = useApp();
+  const { data: orders } = useQuery<OrderWithLines[]>(
+    async () => {
+      if (!profile) return [];
+      const since = new Date(Date.now() - 7 * 86400000).toISOString();
+      const o = await sb.from('orders').select('*').eq('created_by', profile.id)
+        .gte('created_at', since).order('created_at', { ascending: false });
+      if (o.error) throw o.error;
+      const rows = (o.data ?? []) as Order[];
+      if (rows.length === 0) return [];
+      const l = await sb.from('order_lines').select('*').in('order_id', rows.map((x) => x.id));
+      if (l.error) throw l.error;
+      const lines = (l.data ?? []) as OrderLine[];
+      return rows.map((x) => ({ ...x, lines: lines.filter((y) => y.order_id === x.id) }));
+    },
+    [profile?.id],
+    [],
+  );
+
+  return (
+    <>
+      <Sect>أوردراتي — آخر ٧ أيام</Sect>
+      {orders.length === 0 && <Empty>مفيش أوردرات</Empty>}
+      {orders.map((o) => (
+        <div className="card" key={o.id}>
+          <b>{outletById(o.outlet_id)?.name ?? '؟'}</b> <span className="small">{stampOf(o.created_at)}</span>{' '}
+          <Pill tone={ORDER_TONE[o.status]}>{ORDER_STATUS_LABEL[o.status]}</Pill>
+          <br />
+          <span className="small">{linesText(linesToMap(o.lines), (id) => skuById(id)?.name_ar)}</span>
+          {o.cancel_reason && (o.status === 'cancelled' || o.status === 'rejected') && (
+            <><br /><span className="small">السبب: {o.cancel_reason}</span></>
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
 
 export default function MyLog() {
   const { profile, outletById } = useApp();
@@ -61,6 +107,8 @@ export default function MyLog() {
           </div>
         );
       })}
+
+      <MyOrders />
     </>
   );
 }

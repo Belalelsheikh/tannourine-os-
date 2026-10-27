@@ -4,8 +4,11 @@ import { sb, errText } from '../../lib/supabase';
 import { DAY_LABELS, DAY_ORDER } from '../../lib/format';
 import { ActionButton, Empty, ErrLine, Field, Hint, Pill, Segmented } from '../../components/ui';
 
-/** Route builder — writes `routes` for one coordinator/weekday at a time (PRD §15.6). */
-export default function RoutesBuilder() {
+/**
+ * Route builder — writes `routes` for one coordinator/weekday at a time (PRD §15.6).
+ * `readOnly` (التوصيل) shows only the outlets already on the day, with nothing to save.
+ */
+export default function RoutesBuilder({ readOnly = false }: { readOnly?: boolean }) {
   const { profiles, outlets, routes, reloadRef, toast } = useApp();
   const coordinators = profiles.filter((p) => p.role === 'coordinator' && p.active);
 
@@ -31,10 +34,11 @@ export default function RoutesBuilder() {
   const chains = useMemo(() => ['الكل', ...new Set(outlets.map((o) => o.chain))], [outlets]);
   const needle = q.trim();
   const list = outlets.filter(
-    (o) => (chain === 'الكل' || o.chain === chain) && (!needle || (o.name + o.chain).includes(needle)),
+    (o) => (chain === 'الكل' || o.chain === chain) && (!needle || (o.name + o.chain).includes(needle))
+      && (!readOnly || selected.has(o.id)),
   );
 
-  const toggle = (id: number) =>
+  const toggle = (id: number) => !readOnly &&
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
@@ -104,7 +108,7 @@ export default function RoutesBuilder() {
         ))}
       </div>
 
-      <ActionButton className="send okbtn" onClick={save}>حفظ خط {DAY_LABELS[day]}</ActionButton>
+      {!readOnly && <ActionButton className="send okbtn" onClick={save}>حفظ خط {DAY_LABELS[day]}</ActionButton>}
     </>
   );
 }

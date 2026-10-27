@@ -52,7 +52,8 @@ export function dwellText(seconds: number | null): string {
 
 export const ROLE_NAMES: Record<Role, string> = {
   mgmt: 'الإدارة',
-  router: 'الأوردرات',
+  router: 'خدمة عملاء',
+  dispatch: 'التوصيل',
   invoice: 'الفواتير',
   finance: 'المالية',
   supervisor: 'مشرف',
@@ -87,16 +88,21 @@ export const FLAG_LABEL: Record<string, string> = {
 };
 
 export const ORDER_STATUS_LABEL: Record<string, string> = {
-  pending: 'مستني الاعتماد',
-  approved: 'اتعتمد',
-  rejected: 'اترفض',
+  pending: 'في انتظار المشرف',
+  leader_approved: 'معتمد من المشرف',
+  approved: 'معتمد',
+  rejected: 'مرفوض',
+  cancelled: 'ملغي',
   invoiced: 'اتفوتر',
 };
 
 export const INVOICE_STATUS_LABEL: Record<string, string> = {
-  created: 'اتعملت',
-  dispatched: 'خرجت مع العربية',
-  delivered: 'اتسلّمت',
+  created: 'مسودة',
+  issued: 'صادرة',
+  dispatched: 'خرجت',
+  delivered: 'اتسلمت',
+  matched: 'مطابقة',
+  short: 'نقص',
   void: 'ملغاة',
 };
 

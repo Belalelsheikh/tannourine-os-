@@ -6,8 +6,8 @@ import OrderLines, { type CaseMap } from '../../components/OrderLines';
 import { ActionButton, Empty, ErrLine, Field, Hint, Sect } from '../../components/ui';
 import type { BookStock, Container, ContainerLine } from '../../lib/types';
 
-/** Book stock = containers in − non-legacy invoiced out (PRD §9). */
-export default function Stock() {
+/** Book stock = containers in − non-legacy invoiced out (PRD §9). `readOnly` hides container entry. */
+export default function Stock({ readOnly = false }: { readOnly?: boolean }) {
   const { profile, skuById, bump, toast } = useApp();
   const [lines, setLines] = useState<CaseMap>({});
   const [arrival, setArrival] = useState(todayISO());
@@ -89,6 +89,7 @@ export default function Stock() {
       </div>
       <Hint>الرصيد دفتري — قارنه بالجرد الفعلي دوريًا. أي فرق = تسرب أو خطأ تسجيل. الفواتير الملغاة والأرصدة السابقة لا تُحتسب.</Hint>
 
+      {!readOnly && <>
       <Sect>{isFirst ? 'تسجيل الرصيد الافتتاحي' : 'تسجيل وصول حاوية'}</Sect>
       <Field label="تاريخ الوصول" required>
         <input type="date" value={arrival} onChange={(e) => setArrival(e.target.value)} />
@@ -105,6 +106,7 @@ export default function Stock() {
       <ActionButton className="send" onClick={save}>
         {isFirst ? 'تسجيل الرصيد الافتتاحي' : 'تسجيل الحاوية'}
       </ActionButton>
+      </>}
 
       <Sect>حاويات سابقة</Sect>
       {data.containers.length === 0 && <Empty>لسه مفيش حاويات مسجلة</Empty>}

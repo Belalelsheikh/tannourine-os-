@@ -263,3 +263,29 @@ the previous visit on each row. A pending visit's «راجعها في المتا
 
 **Not checked:** a Cairo supervisor (حسام) seeing all القاهرة coordinators — covered by
 `tests/visitsHistory.test.ts`, not walked on screen.
+
+---
+
+## Money layer v2 — batch 1: approval chain + portal-mirror invoice (27 Oct 2026)
+
+Branch `feat/money-layer-v2-batch1`. Needs `supabase/manual/2026-10-27_money_layer_v2.sql`
+sections A + B, plus `…_amendments.sql` blocks 1–4. Neither had been run when this was written
+(the live DB has no `eta_ref`, no `leader_approved`, no `dispatch` role).
+
+**Nothing below has been walked.** `npm run build` (tsc + vite) and `npm test` pass; that is all.
+
+| # | Item | Result |
+|---|---|---|
+| 1 | Coordinator order → supervisor «اعتماد الأوردرات» → مروه «الأوردرات» edits a line (audit `edit_order`) + final approve → عمرو creates, enters ETA no., «تم الإصدار» → علي «التوصيل» dispatches with driver, delivers | **Not walked** — DB lacks A+B |
+| 2 | Email order lands directly in مروه's final queue, never a supervisor's | **Not walked** |
+| 3 | مروه cancels with reason → coordinator «سجلّي» shows «ملغي» + reason | **Not walked** |
+| 4 | Coordinator session: `/rest/v1/invoices`, `/collections` return 0 rows | **Not walked** — section A (RLS only, no app change) |
+| 5 | The two Zahran orders from 15–16 Sept end to end | **Not walked** |
+
+Deviations from the brief:
+- A rejection's reason is stored in `orders.cancel_reason` (the SQL has no reject-reason column).
+- In مروه's folded «عند المشرف» / «عند عمرو» sections each order still offers «إلغاء» — the SQL allows cancel on any non-invoiced order.
+- Pending orders from coordinators whose `supervisor_id` is مروه (today: محمد عبد الحميد) go straight to her final queue with one approval («منسقك — اعتماد واحد»).
+- The 48 h «خرجت ولم تُسلَّم» auto-followup for مروه is deferred to batch 2 (needs C9 `kind` / `invoice_id`, and `fu_ins` for `dispatch`); batch 1 shows the crit border only.
+- No visit link on approval cards: `orders` has no `visit_id`.
+- Supervisor «الشيكات» and finance «التحويلات» pick only `matched` or legacy invoices, matching B's collections trigger. Until batch 2 that means legacy balances only.

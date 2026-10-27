@@ -38,7 +38,8 @@ export default function SupCheques() {
       if (outletId == null) return [];
       const { data, error } = await sb.from('invoice_open').select('*')
         .eq('outlet_id', outletId)
-        .eq('status', 'delivered')
+        // Money only lands on invoices matched to their إذن استلام (legacy balances excepted).
+        .or('status.eq.matched,legacy.eq.true')
         .gt('open_amount', 0)
         .order('invoice_date');
       if (error) throw error;

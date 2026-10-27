@@ -1,12 +1,12 @@
 /* Row types mirroring schema.sql. The schema is the contract — these follow it, never the reverse. */
 
-export type Role = 'mgmt' | 'router' | 'invoice' | 'finance' | 'supervisor' | 'coordinator';
+export type Role = 'mgmt' | 'router' | 'dispatch' | 'invoice' | 'finance' | 'supervisor' | 'coordinator';
 export type Scope = 'القاهرة' | 'الإسكندرية' | 'الكل';
 export type OrderingMode = 'rep' | 'central' | 'mixed';
 export type PaymentPath = 'cheque' | 'transfer' | 'unknown';
 export type VisitStatus = 'pending' | 'approved' | 'flagged';
-export type OrderStatus = 'pending' | 'approved' | 'rejected' | 'invoiced';
-export type InvoiceStatus = 'created' | 'dispatched' | 'delivered' | 'void';
+export type OrderStatus = 'pending' | 'leader_approved' | 'approved' | 'rejected' | 'cancelled' | 'invoiced';
+export type InvoiceStatus = 'created' | 'issued' | 'dispatched' | 'delivered' | 'matched' | 'short' | 'void';
 export type CollectionStatus = 'received' | 'deposited' | 'cleared' | 'returned';
 export type CollectionType = 'cheque' | 'transfer';
 export type ZeroReason = 'المخزن فاضي' | 'الفرع لم يطلب' | 'أوردر متأخر' | 'مساحة الرف';
@@ -94,6 +94,13 @@ export interface Order {
   created_by: string;
   decided_by: string | null;
   decided_at: string | null;
+  /** First approval — the coordinator's supervisor. Email orders skip it. */
+  leader_decided_by: string | null;
+  leader_decided_at: string | null;
+  /** Required by the DB for `cancelled`; also carries the reason on `rejected`. */
+  cancel_reason: string | null;
+  edited_by: string | null;
+  edited_at: string | null;
   created_at: string;
 }
 
@@ -116,6 +123,12 @@ export interface Invoice {
   dispatched_at: string | null;
   delivered_at: string | null;
   created_by: string | null;
+  /** E-invoice (ETA portal) number — required by the DB for anything past `created`. */
+  eta_ref: string | null;
+  driver: string | null;
+  receipt_path: string | null;
+  matched_by: string | null;
+  matched_at: string | null;
   void_reason: string | null;
   voided_by: string | null;
   voided_at: string | null;

@@ -13,6 +13,7 @@ interface Data {
   zeroLines: number;
   routedIds: string[];
   pendingOrders: number;
+  unissued: number;
   undelivered: number;
   custody: Collection[];
   open: InvoiceOpen[];
@@ -21,7 +22,7 @@ interface Data {
 
 const EMPTY: Data = {
   visits: [], zeroLines: 0, routedIds: [], pendingOrders: 0,
-  undelivered: 0, custody: [], open: [], stock: [],
+  unissued: 0, undelivered: 0, custody: [], open: [], stock: [],
 };
 
 /** Management dashboard — PRD §9. `readOnly` renders the same view for the router role. */
@@ -37,8 +38,8 @@ export default function Dashboard({
       const [v, r, po, ud, cu, op, st] = await Promise.all([
         sb.from('visits').select('*').gte('checkin_at', from).order('checkin_at', { ascending: false }),
         sb.from('routes').select('coordinator_id').eq('weekday', new Date().getDay()),
-        sb.from('orders').select('id', head).eq('status', 'pending'),
-        sb.from('invoices').select('id', head).in('status', ['created', 'dispatched']),
+        sb.from('orders').select('id', head).in('status', ['pending', 'leader_approved']),
+        sb.from('invoices').select('status').in('status', ['created', 'dispatched']),
         sb.from('collections').select('*').eq('type', 'cheque').eq('status', 'received'),
         sb.from('invoice_open').select('*').gt('open_amount', 0).eq('status', 'delivered'),
         sb.from('book_stock').select('*'),
@@ -59,7 +60,8 @@ export default function Dashboard({
         zeroLines,
         routedIds: [...new Set(((r.data ?? []) as { coordinator_id: string }[]).map((x) => x.coordinator_id))],
         pendingOrders: po.count ?? 0,
-        undelivered: ud.count ?? 0,
+        unissued: ((ud.data ?? []) as { status: string }[]).filter((x) => x.status === 'created').length,
+        undelivered: ((ud.data ?? []) as { status: string }[]).filter((x) => x.status === 'dispatched').length,
         custody: (cu.data ?? []) as Collection[],
         open: (op.data ?? []) as InvoiceOpen[],
         stock: (st.data ?? []) as BookStock[],
@@ -94,7 +96,8 @@ export default function Dashboard({
           { n: silent.length, label: 'منسقين صامتين', tone: silent.length ? 'bad' : undefined },
           { n: data.zeroLines, label: 'أصناف صفر اليوم', tone: data.zeroLines ? 'bad' : undefined },
           { n: data.pendingOrders, label: 'أوردرات معلقة', tone: data.pendingOrders ? 'w' : undefined },
-          { n: data.undelivered, label: 'فواتير لم تُسلَّم', tone: data.undelivered ? 'w' : undefined },
+          { n: data.unissued, label: 'فواتير لم تصدر', tone: data.unissued ? 'w' : undefined },
+          { n: data.undelivered, label: 'خرجت ولم تُسلَّم', tone: data.undelivered ? 'w' : undefined },
           { n: data.custody.length, label: 'شيكات بالعهدة', tone: data.custody.length ? 'w' : undefined },
         ]}
       />

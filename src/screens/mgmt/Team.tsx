@@ -6,7 +6,7 @@ import { ROLE_NAMES } from '../../lib/format';
 import { ActionButton, ErrLine, Field, Hint, Pill, Sect } from '../../components/ui';
 import type { Profile, Role, Scope } from '../../lib/types';
 
-const ROLES: Role[] = ['coordinator', 'supervisor', 'router', 'invoice', 'finance', 'mgmt'];
+const ROLES: Role[] = ['coordinator', 'supervisor', 'router', 'dispatch', 'invoice', 'finance', 'mgmt'];
 const SCOPES: Scope[] = ['القاهرة', 'الإسكندرية', 'الكل'];
 
 export default function Team() {
