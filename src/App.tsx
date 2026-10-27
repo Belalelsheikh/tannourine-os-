@@ -3,6 +3,7 @@ import { useApp, useQuery } from './lib/app';
 import { sb, configured } from './lib/supabase';
 import { ROLE_NAMES } from './lib/format';
 import { coordinatorsInScope } from './lib/scope';
+import { leaderApprovableIds } from './lib/orders';
 import type { Profile, Role } from './lib/types';
 import Login from './components/Login';
 
@@ -13,10 +14,12 @@ import TeamNow from './screens/supervisor/TeamNow';
 import Followups from './screens/supervisor/Followups';
 import SupCheques from './screens/supervisor/Cheques';
 import SupVisits from './screens/supervisor/Visits';
+import Approvals from './screens/supervisor/Approvals';
 import Intake from './screens/router/Intake';
 import Board from './screens/router/Board';
 import ToInvoice from './screens/invoice/ToInvoice';
 import Invoices from './screens/invoice/Invoices';
+import Delivery from './screens/dispatch/Delivery';
 import FinCheques from './screens/finance/Cheques';
 import Transfers from './screens/finance/Transfers';
 import Aging from './screens/finance/Aging';
@@ -54,6 +57,7 @@ const TABS: Record<Role, Tab[]> = {
   ],
   supervisor: [
     { id: 'feed', label: 'المتابعة', render: () => <Feed /> },
+    { id: 'appr', label: 'اعتماد الأوردرات', render: () => <Approvals /> },
     { id: 'now', label: 'الفريق الآن', render: () => <TeamNow /> },
     { id: 'fups', label: 'تنبيهات', render: () => <Followups /> },
     { id: 'visits', label: 'الزيارات', render: (nav) => <SupVisits onOpenFeed={nav.openFeed} /> },
@@ -62,7 +66,15 @@ const TABS: Record<Role, Tab[]> = {
   router: [
     { id: 'intake', label: 'تسجيل وارد', render: () => <Intake /> },
     { id: 'board', label: 'الأوردرات', render: () => <Board /> },
+    { id: 'feed', label: 'المتابعة', render: () => <Feed /> },
+    { id: 'fups', label: 'تنبيهات', render: () => <Followups /> },
     visitsTab,
+    { id: 'dash', label: 'لوحة', render: (nav) => <Dashboard readOnly onOpenVisit={nav.openVisit} /> },
+  ],
+  dispatch: [
+    { id: 'deliv', label: 'التوصيل', render: () => <Delivery /> },
+    { id: 'routes', label: 'الخطوط', render: () => <RoutesBuilder readOnly /> },
+    { id: 'stock', label: 'المخزون', render: () => <Stock readOnly /> },
     { id: 'dash', label: 'لوحة', render: (nav) => <Dashboard readOnly onOpenVisit={nav.openVisit} /> },
   ],
   invoice: [
@@ -87,16 +99,17 @@ const TABS: Record<Role, Tab[]> = {
 };
 
 /** Office roles get laptop table layouts at ≥900px — PRD §4. */
-const WIDE_ROLES: Role[] = ['router', 'invoice', 'finance', 'mgmt'];
+const WIDE_ROLES: Role[] = ['router', 'dispatch', 'invoice', 'finance', 'mgmt'];
 
 /** Count badges on the bottom tab bar; recomputed on every realtime tick. */
 function useBadges(profile: Profile | null, profiles: Profile[]) {
   const role = profile?.role;
   const uid = profile?.id;
   // Same team the feed reviews, so the badge counts exactly the cards المتابعة shows.
-  const reviewIds = role === 'supervisor' || role === 'mgmt'
+  const reviewIds = role === 'supervisor' || role === 'mgmt' || role === 'router'
     ? coordinatorsInScope(profile, profiles, { includeInactive: true }).map((c) => c.id)
     : [];
+  const approvableIds = role === 'supervisor' ? leaderApprovableIds(profile, profiles) : [];
   const { data } = useQuery<Record<string, number>>(
     async () => {
       if (!role || !uid) return {};
@@ -110,19 +123,35 @@ function useBadges(profile: Profile | null, profiles: Profile[]) {
           sb.from('visits').select('id', head).eq('status', 'pending').not('checkout_at', 'is', null)
             .in('coordinator_id', reviewIds));
         out.fups = await cnt(sb.from('followups').select('id', head).eq('status', 'open'));
+        if (role === 'supervisor') {
+          out.appr = approvableIds.length === 0 ? 0 : await cnt(
+            sb.from('orders').select('id', head).eq('status', 'pending').in('created_by', approvableIds));
+        }
       } else if (role === 'router') {
-        out.board = await cnt(sb.from('orders').select('id', head).eq('status', 'pending'));
+        // Same queue «الأوردرات» shows: supervisor-approved and email orders, plus pending
+        // orders from coordinators who report to this account directly.
+        const own = profiles.filter((p) => p.role === 'coordinator' && p.supervisor_id === uid).map((p) => p.id);
+        out.board = await cnt(sb.from('orders').select('id', head).eq('status', 'leader_approved'));
+        if (own.length) {
+          out.board += await cnt(sb.from('orders').select('id', head).eq('status', 'pending').in('created_by', own));
+        }
+        out.fups = await cnt(sb.from('followups').select('id', head).eq('status', 'open'));
+        out.feed = reviewIds.length === 0 ? 0 : await cnt(
+          sb.from('visits').select('id', head).eq('status', 'pending').not('checkout_at', 'is', null)
+            .in('coordinator_id', reviewIds));
       } else if (role === 'invoice') {
-        out.toinv = await cnt(sb.from('orders').select('id', head).eq('status', 'approved'));
-        out.invs = await cnt(
-          sb.from('invoices').select('id', head).in('status', ['created', 'dispatched']));
+        // Approved orders to invoice plus drafts still waiting for their ETA number.
+        out.toinv = await cnt(sb.from('orders').select('id', head).eq('status', 'approved'))
+          + await cnt(sb.from('invoices').select('id', head).eq('status', 'created'));
+      } else if (role === 'dispatch') {
+        out.deliv = await cnt(sb.from('invoices').select('id', head).in('status', ['issued', 'dispatched']));
       } else if (role === 'finance') {
         out.chqb = await cnt(
           sb.from('collections').select('id', head).eq('type', 'cheque').in('status', ['received', 'deposited']));
       }
       return out;
     },
-    [role, uid, reviewIds.join(',')],
+    [role, uid, reviewIds.join(','), approvableIds.join(','), profiles.length],
     {},
   );
   return data;

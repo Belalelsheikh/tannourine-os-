@@ -108,7 +108,7 @@ export function AppProvider({ children, onToast }: { children: ReactNode; onToas
     bump();
   }, [session?.user?.id, loadRef, bump]);
 
-  // ---- realtime: live badges on visits / orders / collections (PRD §2, §15.3) ----
+  // ---- realtime: live badges on visits / orders / collections / invoices (PRD §2, §15.3) ----
   const bumpRef = useRef(bump);
   bumpRef.current = bump;
   useEffect(() => {
@@ -118,6 +118,8 @@ export function AppProvider({ children, onToast }: { children: ReactNode; onToas
       .on('postgres_changes', { event: '*', schema: 'public', table: 'visits' }, () => bumpRef.current())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => bumpRef.current())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'collections' }, () => bumpRef.current())
+      // Three desks now hand invoices to each other (عمرو → علي → سلمي).
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'invoices' }, () => bumpRef.current())
       .subscribe();
     return () => { void sb.removeChannel(channel); };
   }, [session?.user?.id]);

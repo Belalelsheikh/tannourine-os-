@@ -8,7 +8,9 @@ export type AuditAction =
   | 'set_supervisor'
   | 'deactivate_user'
   | 'activate_user'
-  | 'edit_outlet';
+  | 'edit_outlet'
+  | 'edit_order'
+  | 'cancel_order';
 
 /**
  * Append-only trail (no hard deletes anywhere — PRD §7).

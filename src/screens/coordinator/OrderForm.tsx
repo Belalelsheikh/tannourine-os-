@@ -36,7 +36,7 @@ export default function OrderForm({
       );
       if (lineRes.error) throw lineRes.error;
 
-      toast('الأوردر وصل لمسؤول الأوردرات');
+      toast('الأوردر وصل للمشرف للاعتماد');
       onDone();
     } catch (e) {
       setErr(`ما اتبعتش: ${errText(e)} — الكميات محفوظة، حاول تاني`);
