@@ -247,16 +247,19 @@ Branch `feat/supervisor-visits`. Read-only; no migration, no RLS change (`visits
 lets supervisors read every row). History scope goes by `profiles.scope` only
 (`historyCoordinators()`), not by `supervisor_id`.
 
-Counts below were checked with SQL run as مروه (`role authenticated` + her `sub`), which is the
-same RLS context the screen queries in. The data moved since the brief (one more pending visit).
+Walked on screen as مروه on `localhost:5173` (27 Oct, ~13:30 Cairo), against the live project.
+The data moved since the brief: more visits came in during the day.
 
 | # | Item | Result |
 |---|---|---|
-| 1 | مروه sees the tab and ≥ 100 visits | **PASS on «الكل» range** — 123 visits (74 approved, 25 pending incl. 2 open, 24 rejected). The default «آخر 7 أيام» shows **89**, so ≥ 100 holds only with the all-time preset. |
-| 2 | Coordinator filter / status=approved | **PASS (data)** — محمد عبد الحميد → 12 (10 pending, 2 rejected); status «اتعتمدت» alone → 74. The two combined are empty: he has no approved visits. |
-| 3 | Approved visit opens full detail | **PASS (code)** — same `VisitDetail` as the mgmt screen: SKU shelf/warehouse/sold/zero reason, photo on tap, orders, follow-ups, reviewer + `reviewed_at`. |
+| 1 | مروه sees the tab and ≥ 100 visits | **PASS on «الكل» range** — tab sits after «تنبيهات»; «الكل» shows **126**. The default «آخر 7 أيام» shows **92**, so ≥ 100 holds only on the all-time range. |
+| 2 | Coordinator filter / status=approved | **PASS** — محمد عبد الحميد → 12, every row his; «اتعتمدت» → 74 of 126 («مستنية» 27 incl. open visits, «اترفضت» 25). He has no approved visits, so the two combined are empty. The coordinator list has all 8 coordinators incl. the deactivated محمد عبد الباسط. |
+| 3 | Approved visit opens full detail | **PASS** — e.g. Seoudi الدقى 26/10 (رنا): SKU shelf/warehouse/sold with zero reasons, times, GPS, «راجعها محمد رجب · 15:15», order line, photo loads on tap. |
 | 4 | Coordinator sees only own visits | **PASS** — coordinator tabs and RLS untouched. |
-| 5 | No write path | **PASS (code)** — every REST call is a `select`. A photo tap calls storage `createSignedUrl`, which is a POST to `/storage/v1/object/sign/…` — read-only, but not a SELECT, so it shows in the network tab. |
+| 5 | No write path | **PASS** — every call the page made was logged with a fetch wrapper. REST: only `GET` on `visits`, `followups`, `orders`. The one non-GET is `POST /storage/v1/object/sign/visit-photos/…` when a photo is opened: it creates a signed read URL and writes nothing. |
 
-**Still manual:** the UI walk logged in as marwa@tannourine.local (items 1–3 on screen, 5 in the
-network tab), and a Cairo supervisor (حسام) to confirm they see all القاهرة coordinators.
+Also checked: «سجل الفرع» (Gourmet الدقى) shows 5 visits, «آخر زيارة من 1 يوم», and the gap to
+the previous visit on each row. A pending visit's «راجعها في المتابعة ←» switches to «المتابعة».
+
+**Not checked:** a Cairo supervisor (حسام) seeing all القاهرة coordinators — covered by
+`tests/visitsHistory.test.ts`, not walked on screen.
