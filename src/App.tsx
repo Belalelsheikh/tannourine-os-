@@ -66,6 +66,7 @@ const TABS: Record<Role, Tab[]> = {
   router: [
     { id: 'intake', label: 'تسجيل وارد', render: () => <Intake /> },
     { id: 'board', label: 'الأوردرات', render: () => <Board /> },
+    { id: 'feed', label: 'المتابعة', render: () => <Feed /> },
     { id: 'fups', label: 'تنبيهات', render: () => <Followups /> },
     visitsTab,
     { id: 'dash', label: 'لوحة', render: (nav) => <Dashboard readOnly onOpenVisit={nav.openVisit} /> },
@@ -105,7 +106,7 @@ function useBadges(profile: Profile | null, profiles: Profile[]) {
   const role = profile?.role;
   const uid = profile?.id;
   // Same team the feed reviews, so the badge counts exactly the cards المتابعة shows.
-  const reviewIds = role === 'supervisor' || role === 'mgmt'
+  const reviewIds = role === 'supervisor' || role === 'mgmt' || role === 'router'
     ? coordinatorsInScope(profile, profiles, { includeInactive: true }).map((c) => c.id)
     : [];
   const approvableIds = role === 'supervisor' ? leaderApprovableIds(profile, profiles) : [];
@@ -135,6 +136,9 @@ function useBadges(profile: Profile | null, profiles: Profile[]) {
           out.board += await cnt(sb.from('orders').select('id', head).eq('status', 'pending').in('created_by', own));
         }
         out.fups = await cnt(sb.from('followups').select('id', head).eq('status', 'open'));
+        out.feed = reviewIds.length === 0 ? 0 : await cnt(
+          sb.from('visits').select('id', head).eq('status', 'pending').not('checkout_at', 'is', null)
+            .in('coordinator_id', reviewIds));
       } else if (role === 'invoice') {
         // Approved orders to invoice plus drafts still waiting for their ETA number.
         out.toinv = await cnt(sb.from('orders').select('id', head).eq('status', 'approved'))

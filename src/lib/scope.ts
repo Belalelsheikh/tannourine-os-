@@ -2,7 +2,9 @@ import type { Profile } from './types';
 
 /**
  * Which coordinators a viewer supervises — PRD §5.8.
- * Assigned coordinators win; governorate scope is the fallback; 'الكل' (marwa, mgmt) sees all.
+ * Assigned coordinators win; governorate scope is the fallback; 'الكل' (mgmt) sees all.
+ * A router (مروه) supervises only the coordinators assigned to her — never the fallback and
+ * never الكل, even though her scope stays الكل for follow-ups and visit history.
  *
  * `includeInactive` is for review work only: a coordinator deactivated mid-week can still
  * leave a pending or never-closed visit, and leaving them out hides it from everyone.
@@ -14,6 +16,7 @@ export function coordinatorsInScope(
 ): Profile[] {
   const coordinators = all.filter((p) => p.role === 'coordinator' && (includeInactive || p.active));
   if (!viewer) return [];
+  if (viewer.role === 'router') return coordinators.filter((c) => c.supervisor_id === viewer.id);
   if (viewer.role === 'mgmt' || viewer.scope === 'الكل') return coordinators;
 
   const assigned = coordinators.filter((c) => c.supervisor_id === viewer.id);
@@ -24,6 +27,6 @@ export function coordinatorsInScope(
 
 /** True when the fallback is in play — both Cairo supervisors then see the same board. */
 export function usingGovFallback(viewer: Profile | null, all: Profile[]): boolean {
-  if (!viewer || viewer.role === 'mgmt' || viewer.scope === 'الكل') return false;
+  if (!viewer || viewer.role === 'mgmt' || viewer.role === 'router' || viewer.scope === 'الكل') return false;
   return !all.some((p) => p.role === 'coordinator' && p.active && p.supervisor_id === viewer.id);
 }

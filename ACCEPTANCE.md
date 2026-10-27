@@ -289,3 +289,21 @@ Deviations from the brief:
 - The 48 h «خرجت ولم تُسلَّم» auto-followup for مروه is deferred to batch 2 (needs C9 `kind` / `invoice_id`, and `fu_ins` for `dispatch`); batch 1 shows the crit border only.
 - No visit link on approval cards: `orders` has no `visit_id`.
 - Supervisor «الشيكات» and finance «التحويلات» pick only `matched` or legacy invoices, matching B's collections trigger. Until batch 2 that means legacy balances only.
+
+### Addendum — مروه keeps Alexandria (27 Oct)
+
+As `router`, مروه supervises only coordinators whose `supervisor_id` is her (`coordinatorsInScope`),
+never the governorate fallback or الكل. Her «الزيارات» history stays scope-based. She gets «المتابعة»
+after «الأوردرات», with a badge for her own coordinator's pending visits. Needs amendments block 6
+(`visits_upd_review`). `tests/scope.test.ts` covers the scope rule.
+
+| # | Item | Result |
+|---|---|---|
+| 1 | مروه as router: «المتابعة» shows only محمد عبد الحميد's pending visits; approve → `reviewed_by` = her | **Not walked** — she is still `supervisor`; block 6 not run |
+| 2 | Her «الزيارات» history shows all coordinators | **Unit-tested only** (`historyCoordinators` for router at الكل) |
+| 3 | Reviewing a Cairo coordinator's visit as مروه via API → RLS refuses | **Not walked** — needs block 6 |
+| 4 | حسام and محمد رجب unchanged | **Unit-tested only** — supervisor path untouched |
+
+Side effect: her read-only «لوحة» also narrows its silent-coordinator banner and photo-rate table to her
+own coordinator, since the dashboard uses the same `coordinatorsInScope`.
+
