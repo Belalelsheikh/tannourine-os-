@@ -75,3 +75,22 @@ export function outletTimeline<V extends Visit>(visits: V[]): OutletEntry<V>[] {
     }))
     .reverse();
 }
+
+export interface CoordinatorGroup<V extends Visit> {
+  coordinatorId: string;
+  /** Newest first, as the list arrives. */
+  visits: V[];
+}
+
+/**
+ * The list split per coordinator, keeping each one's visits newest first. Coordinators are
+ * ordered by their latest visit, so whoever was in the field most recently comes first.
+ */
+export function groupByCoordinator<V extends Visit>(visits: V[]): CoordinatorGroup<V>[] {
+  const groups = new Map<string, V[]>();
+  for (const v of [...visits].sort((a, b) => +new Date(b.checkin_at) - +new Date(a.checkin_at))) {
+    const g = groups.get(v.coordinator_id);
+    if (g) g.push(v); else groups.set(v.coordinator_id, [v]);
+  }
+  return [...groups].map(([coordinatorId, vs]) => ({ coordinatorId, visits: vs }));
+}
