@@ -1,10 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp, useQuery } from '../../lib/app';
 import { sb, errText } from '../../lib/supabase';
-import { GPS_PRIVACY_LINE, getPosition, gpsNoticeSeen, markGpsNoticeSeen } from '../../lib/geo';
+import { GPS_PRIVACY_LINE, gpsNoticeSeen, markGpsNoticeSeen } from '../../lib/geo';
+import { activeKey, pruneDrafts } from '../../lib/visitDraft';
 import { ORD_LABEL, isToday, stampOf, todayISO } from '../../lib/format';
 import { Empty, ErrLine, Field, Hint, Pill, StatTiles } from '../../components/ui';
 import VisitForm from './VisitForm';
+import GateStep from './GateStep';
 import OrderForm from './OrderForm';
 import type { Outlet, Visit } from '../../lib/types';
 
@@ -12,6 +14,7 @@ type View =
   | { k: 'list' }
   | { k: 'search' }
   | { k: 'outlet'; outletId: number; offRoute: boolean }
+  | { k: 'gate'; outlet: Outlet; offRoute: boolean; existing: Visit | null }
   | { k: 'form'; visit: Visit; outlet: Outlet }
   | { k: 'order'; outlet: Outlet };
 
@@ -38,7 +41,7 @@ export default function RouteToday() {
   // Today's visits drive the "تمت" markers. Open visits are fetched without a date filter:
   // a visit started last night and never submitted must still be resumable, otherwise it is
   // stranded `pending` forever with no way to close it (PRD §5.7).
-  const { data: myVisits } = useQuery<Visit[]>(
+  const { data: myVisits, loading: visitsLoading, error: visitsError } = useQuery<Visit[]>(
     async () => {
       if (!profile) return [];
       const mine = () => sb.from('visits').select('*').eq('coordinator_id', profile.id);
@@ -61,6 +64,31 @@ export default function RouteToday() {
   );
   const openVisit = myVisits.find((v) => v.checkout_at == null) ?? null;
 
+  // Which visit form is on screen survives a reload, so the coordinator lands back in it
+  // (Batch A1). Cleared on «رجوع» and on a successful submit.
+  const setActive = (visitId: string | null) => {
+    if (!profile) return;
+    try {
+      if (visitId) localStorage.setItem(activeKey(profile.id), visitId);
+      else localStorage.removeItem(activeKey(profile.id));
+    } catch { /* storage unavailable — the banner still offers «كمّل الزيارة» */ }
+  };
+
+  /** Into the count form — via the gate photo if this visit still needs one. */
+  const resume = async (visit: Visit, outlet: Outlet) => {
+    setErr(null);
+    setActive(visit.id);
+    if (visit.gate_required) {
+      const gate = await sb.from('visit_photos').select('id').eq('visit_id', visit.id).eq('kind', 'gate').limit(1);
+      if (gate.error) { setErr(errText(gate.error)); return; }
+      if ((gate.data?.length ?? 0) === 0) {
+        setView({ k: 'gate', outlet, offRoute: visit.off_route, existing: visit });
+        return;
+      }
+    }
+    setView({ k: 'form', visit, outlet });
+  };
+
   const startVisit = async (outlet: Outlet, offRoute: boolean) => {
     if (!profile) return;
     setErr(null);
@@ -73,35 +101,57 @@ export default function RouteToday() {
       const existing = myVisits.find(
         (v) => v.outlet_id === outlet.id && v.checkout_at == null && isToday(v.checkin_at),
       );
-      if (existing) { setView({ k: 'form', visit: existing, outlet }); return; }
-
-      const pos = await getPosition();          // never blocks — null is fine
-      const { data, error } = await sb.from('visits').insert({
-        coordinator_id: profile.id,
-        outlet_id: outlet.id,
-        checkin_at: new Date().toISOString(),
-        checkin_lat: pos?.lat ?? null,
-        checkin_lng: pos?.lng ?? null,
-        off_route: offRoute,
-      }).select('*').single();
-      if (error) throw error;
-      bump();
-      setView({ k: 'form', visit: data as Visit, outlet });
-    } catch (e) {
-      setErr(errText(e));
+      if (existing) { await resume(existing, outlet); return; }
+      setView({ k: 'gate', outlet, offRoute, existing: null });
     } finally {
       setStarting(false);
     }
   };
 
+  // After a reload: drop drafts for visits that are no longer open, and reopen the form the
+  // coordinator was in. Waits for a successful fetch so a network error never wipes drafts.
+  const resumedOnce = useRef(false);
+  useEffect(() => {
+    if (!profile || visitsLoading || visitsError || resumedOnce.current) return;
+    resumedOnce.current = true;
+    const open = myVisits.filter((v) => v.checkout_at == null);
+    try { pruneDrafts(localStorage, new Set(open.map((v) => v.id))); } catch { /* ignore */ }
+    let activeId: string | null = null;
+    try { activeId = localStorage.getItem(activeKey(profile.id)); } catch { /* ignore */ }
+    const v = open.find((x) => x.id === activeId);
+    const o = v ? outletById(v.outlet_id) : undefined;
+    if (v && o && view.k === 'list') void resume(v, o);
+    else if (activeId && !v) setActive(null);
+  }, [profile?.id, visitsLoading, visitsError, myVisits]);
+
+  // ---------- check-in: fence + gate photo ----------
+  if (view.k === 'gate') {
+    return (
+      <GateStep
+        key={view.existing?.id ?? `new-${view.outlet.id}`}
+        outlet={view.outlet}
+        offRoute={view.offRoute}
+        existing={view.existing}
+        onCancel={() => { setActive(null); bump(); setView({ k: 'outlet', outletId: view.outlet.id, offRoute: view.offRoute }); }}
+        onReady={(visit) => {
+          bump();
+          setActive(visit.id);
+          setView({ k: 'form', visit, outlet: view.outlet });
+        }}
+      />
+    );
+  }
+
   // ---------- visit form ----------
   if (view.k === 'form') {
     return (
       <VisitForm
+        key={view.visit.id}
         visit={view.visit}
         outlet={view.outlet}
-        onCancel={() => { bump(); setView({ k: 'list' }); }}
+        onCancel={() => { setActive(null); bump(); setView({ k: 'list' }); }}
         onDone={() => {
+          setActive(null);
           bump();
           if (view.outlet.ordering_mode === 'central') setView({ k: 'list' });
           // Keep the visit's own off-route mark: a follow-on order or recount from this screen
@@ -232,7 +282,7 @@ export default function RouteToday() {
               className="mini dark"
               onClick={() => {
                 const o = outletById(openVisit.outlet_id);
-                if (o) setView({ k: 'form', visit: openVisit, outlet: o });
+                if (o) void resume(openVisit, o);
                 else toast('الفرع مش موجود');
               }}
             >

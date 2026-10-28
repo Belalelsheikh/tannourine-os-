@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useApp, useQuery } from '../../lib/app';
-import { sb, errText, BUCKET_VISITS } from '../../lib/supabase';
+import { sb, errText } from '../../lib/supabase';
 import { coordinatorsInScope } from '../../lib/scope';
 import { FLAG_LABEL, dwellText, fmt, stampOf, timeOf, todayISO } from '../../lib/format';
 import { ageLabel, calendarDaysAgo, closeUnfinishedPatch, missingPhoto, reviewQueue } from '../../lib/review';
-import { ActionButton, Empty, ErrLine, Pill, SecureImage, Sect } from '../../components/ui';
+import { ActionButton, Empty, ErrLine, Pill, Sect, VisitPhotos } from '../../components/ui';
 import type { Visit, VisitLine } from '../../lib/types';
 
 const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
@@ -127,7 +127,9 @@ export default function Feed() {
         <span className="small">
           مدة {dwellText(v.dwell_seconds)} ·{' '}
           {v.distance_m == null ? 'الموقع لسه ما اتحددش' : `${fmt(v.distance_m)} م من الفرع`}
+          {v.checkout_distance_m != null && ` · الإرسال ${fmt(v.checkout_distance_m)} م من البدء`}
         </span>
+        {v.checkin_reason && <><br /><span className="small">سبب البعد عند البدء: {v.checkin_reason}</span></>}
         <br />
         {zeros.length > 0
           ? (
@@ -146,15 +148,13 @@ export default function Feed() {
           </div>
         )}
 
-        {v.photo_path && (
-          openPhoto === v.id
-            ? <SecureImage bucket={BUCKET_VISITS} path={v.photo_path} />
-            : (
-              <div className="btnrow">
-                <button className="mini" onClick={() => setOpenPhoto(v.id)}>شوف صورة الرف</button>
-              </div>
-            )
-        )}
+        {openPhoto === v.id
+          ? <VisitPhotos visitId={v.id} legacyPath={v.photo_path} />
+          : (
+            <div className="btnrow">
+              <button className="mini" onClick={() => setOpenPhoto(v.id)}>شوف الصور</button>
+            </div>
+          )}
 
         {v.status === 'pending' && (
           <div className="btnrow">

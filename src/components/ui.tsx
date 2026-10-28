@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { compressImage, signedUrl } from '../lib/photo';
+import { compressImage, signedUrl, sortVisitPhotos } from '../lib/photo';
+import { sb, BUCKET_VISITS } from '../lib/supabase';
+import { PHOTO_KIND_LABEL } from '../lib/format';
+import type { VisitPhoto } from '../lib/types';
 import { parseCount } from '../lib/numerals';
 
 export const Sect = ({ children }: { children: ReactNode }) => <div className="sect">{children}</div>;
@@ -29,8 +32,14 @@ export function StatTiles({ items }: { items: { n: ReactNode; label: string; ton
 
 /** Stepper input (− value +) — the only quantity control in the system (PRD §11). */
 export function Stepper({
-  value, onChange, allowEmpty = false,
-}: { value: number | null; onChange: (v: number | null) => void; allowEmpty?: boolean }) {
+  value, onChange, allowEmpty = false, placeholder,
+}: {
+  value: number | null;
+  onChange: (v: number | null) => void;
+  allowEmpty?: boolean;
+  /** Grey reference shown while empty — the last visit's count (Batch A2). */
+  placeholder?: string;
+}) {
   const step = (d: number) => onChange(Math.max(0, (value ?? 0) + d));
   return (
     <div className="step">
@@ -39,7 +48,7 @@ export function Stepper({
         inputMode="numeric"
         className={value === 0 ? 'zero' : ''}
         value={value === null ? '' : String(value)}
-        placeholder={allowEmpty ? '—' : '0'}
+        placeholder={placeholder ?? (allowEmpty ? '—' : '0')}
         /*
          * Select on focus so the first keystroke replaces the standing value instead of
          * landing beside it: tapping the centred «0» put the caret before it, so typing 12
@@ -119,6 +128,39 @@ export function SecureImage({ bucket, path }: { bucket: string; path: string | n
   if (!path) return null;
   if (!url) return <p className="small">جارٍ تحميل الصورة…</p>;
   return <img className="thumb" src={url} alt="صورة" style={{ marginTop: 8 }} />;
+}
+
+/**
+ * Every photo of a visit for review: gate photo first (proof of presence), then the rest.
+ * Falls back to the legacy single `photo_path` if the visit predates visit_photos.
+ */
+export function VisitPhotos({ visitId, legacyPath }: { visitId: string; legacyPath?: string | null }) {
+  const [photos, setPhotos] = useState<VisitPhoto[] | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    let alive = true;
+    void sb.from('visit_photos').select('*').eq('visit_id', visitId).then(({ data, error }) => {
+      if (!alive) return;
+      if (error) setErr(error.message);
+      else setPhotos(sortVisitPhotos((data ?? []) as VisitPhoto[]));
+    });
+    return () => { alive = false; };
+  }, [visitId]);
+  if (err) return legacyPath ? <SecureImage bucket={BUCKET_VISITS} path={legacyPath} /> : <p className="err">{err}</p>;
+  if (!photos) return <p className="small">جارٍ تحميل الصور…</p>;
+  if (photos.length === 0) {
+    return legacyPath ? <SecureImage bucket={BUCKET_VISITS} path={legacyPath} /> : <p className="small">مفيش صور</p>;
+  }
+  return (
+    <div className="pgrid">
+      {photos.map((p) => (
+        <figure key={p.id} className="pcell">
+          <SecureImage bucket={BUCKET_VISITS} path={p.path} />
+          <figcaption className="small">{PHOTO_KIND_LABEL[p.kind]}</figcaption>
+        </figure>
+      ))}
+    </div>
+  );
 }
 
 /** Search + chain filter used by outlet pickers and the routes builder. */

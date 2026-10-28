@@ -67,8 +67,10 @@ export function AppProvider({ children, onToast }: { children: ReactNode; onToas
   }, []);
 
   // ---- reference data, loaded once per session ----
-  const loadRef = useCallback(async (uid: string) => {
-    setLoading(true);
+  // `silent` is the «تحديث» button: the screen stays mounted. Flipping `loading` there swapped
+  // the whole app for a spinner, unmounting any open visit form and wiping the count.
+  const loadRef = useCallback(async (uid: string, silent = false) => {
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const [me, outlets, skus, profiles, routes] = await Promise.all([
@@ -90,13 +92,14 @@ export function AppProvider({ children, onToast }: { children: ReactNode; onToas
         routes: (routes.data ?? []) as RouteRow[],
       });
     } catch (e) {
+      if (silent) { onToast(`التحديث ما نجحش: ${errText(e)}`); return; }
       setError(errText(e));
       setProfile(null);
       setRef(EMPTY);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
-  }, []);
+  }, [onToast]);
 
   useEffect(() => {
     if (!session?.user) { setProfile(null); setRef(EMPTY); setLoading(false); return; }
@@ -104,7 +107,7 @@ export function AppProvider({ children, onToast }: { children: ReactNode; onToas
   }, [session?.user?.id, loadRef]);
 
   const reloadRef = useCallback(async () => {
-    if (session?.user) await loadRef(session.user.id);
+    if (session?.user) await loadRef(session.user.id, true);
     bump();
   }, [session?.user?.id, loadRef, bump]);
 

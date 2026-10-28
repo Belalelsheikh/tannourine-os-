@@ -1,4 +1,4 @@
-import type { OrderingMode, PaymentPath, Role, ZeroReason } from './types';
+import type { OrderingMode, PaymentPath, PhotoKind, Role, ZeroReason } from './types';
 
 /** Western numerals throughout — PRD §11. */
 export const fmt = (n: number | null | undefined) =>
@@ -85,6 +85,15 @@ export const FLAG_LABEL: Record<string, string> = {
   no_checkin_gps: 'بدون GPS عند البدء',
   no_checkout_gps: 'بدون GPS عند الإرسال',
   unclosed: 'المشرف قفلها — ما اتبعتتش',
+  far_checkin: 'بدأ بعيد عن الفرع',
+  far_checkout: 'أرسل بعيد عن مكان البدء',
+};
+
+export const PHOTO_KIND_LABEL: Record<PhotoKind, string> = {
+  gate: 'باب الفرع',
+  shelf: 'الرف',
+  cooler: 'الثلاجة',
+  other: 'أخرى',
 };
 
 export const ORDER_STATUS_LABEL: Record<string, string> = {
