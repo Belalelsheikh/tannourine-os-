@@ -154,9 +154,10 @@ export default function GateStep({
       />
 
       <ErrLine>{err}</ErrLine>
-      {blob && err ? (
+      {/* A taken photo is kept: a failed upload, or the server asking for a reason, never needs a retake. */}
+      {blob ? (
         <button className="send" disabled={busy || !reasonOk} onClick={() => void checkIn(blob)}>
-          {busy ? 'جارٍ التسجيل…' : 'حاول تاني'}
+          {busy ? 'جارٍ التسجيل…' : err ? 'حاول تاني' : 'تسجيل الدخول'}
         </button>
       ) : (
         <button

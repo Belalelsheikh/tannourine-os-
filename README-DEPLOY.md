@@ -195,6 +195,20 @@ This creates a folder called **dist**. That folder *is* the app.
 > a separate, deliberate job; until someone does it, treat the CLI's migration commands as unsafe
 > here.
 
+### Batch A (2026-10-28): database first, app straight after
+
+The three `20261028*` migrations (visit photos, geofence, last visit) must be applied **before**
+the new app is deployed: the new app writes to `visit_photos`, which does not exist until then.
+Apply them in filename order, then deploy the app immediately. Phones still on the old app keep
+working for a moment and pick up the new one on their next load (the PWA auto-updates); an old
+visit opened without a gate photo is sent back through the gate step when resumed.
+
+If the two `storage.objects` policies in `20261028120000_visit_photos.sql` fail with
+`must be owner of table objects`, create them from Dashboard → Storage → Policies with the
+same expressions (the file's header says how). `supabase/tests/batch_a_visits.test.sql` is a
+dry run: paste the three migrations and the test between `begin;` and `rollback;` and it
+reports every check and keeps nothing.
+
 ---
 
 ## Step 10 — Install on phones
