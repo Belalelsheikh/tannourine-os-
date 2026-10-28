@@ -36,7 +36,7 @@ select v.id, 'shelf', v.photo_path, coalesce(v.checkout_at, v.checkin_at), v.che
    and not exists (select 1 from visit_photos p where p.visit_id = v.id and p.path = v.photo_path);
 
 -- Visits that existed before this migration never had a gate photo; only new ones need one
--- to check out (enforced in 20261028120100_geofence.sql).
+-- to check out (enforced in 20261028182608_geofence.sql).
 alter table visits add column if not exists gate_required boolean not null default true;
 update visits set gate_required = false where gate_required;
 
