@@ -25,6 +25,11 @@ export const cairoDateOf = (ts: string | number | Date): string => dateFmt.forma
 
 export const cairoToday = (): string => cairoDateOf(Date.now());
 
+const dayMonthFmt = new Intl.DateTimeFormat('ar-EG-u-nu-latn', { timeZone: TZ, day: 'numeric', month: 'long' });
+
+/** «23 أكتوبر» — Arabic month, Western numerals (PRD §11). */
+export const cairoDayMonth = (ts: string): string => dayMonthFmt.format(new Date(ts));
+
 /** `HH:MM` of an instant, in Cairo. */
 export const cairoTime = (ts: string): string => timeFmt.format(new Date(ts));
 

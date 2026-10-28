@@ -34,6 +34,11 @@ export interface Outlet {
   lng: number | null;
   pin_set_by: string | null;
   pin_set_at: string | null;
+  /** Only a supervisor-confirmed pin hard-blocks a far check-in; seeded pins start false. */
+  pin_verified: boolean;
+  /** Nightly median of recent check-in points, for the supervisor to confirm. */
+  pin_proposed_lat: number | null;
+  pin_proposed_lng: number | null;
   active: boolean;
 }
 
@@ -72,7 +77,25 @@ export interface Visit {
   reviewed_at: string | null;
   flags: string[];
   off_route: boolean;
+  /** Why the coordinator checked in > 150 m from an unverified pin. */
+  checkin_reason: string | null;
+  /** Check-out point to check-in point; set by the DB on checkout. */
+  checkout_distance_m: number | null;
+  /** False for visits from before the gate photo existed. */
+  gate_required: boolean;
   created_at: string;
+}
+
+export type PhotoKind = 'gate' | 'shelf' | 'cooler' | 'other';
+
+export interface VisitPhoto {
+  id: string;
+  visit_id: string;
+  kind: PhotoKind;
+  path: string;
+  taken_at: string;
+  lat: number | null;
+  lng: number | null;
 }
 
 export interface VisitLine {

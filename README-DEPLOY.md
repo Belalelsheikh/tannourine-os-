@@ -195,6 +195,24 @@ This creates a folder called **dist**. That folder *is* the app.
 > a separate, deliberate job; until someone does it, treat the CLI's migration commands as unsafe
 > here.
 
+### Batch A (2026-10-28): database first, app straight after
+
+Applied to production on 2026-10-28 at 21:25 Cairo time as `20261028182533_visit_photos`,
+`20261028182608_geofence`, `20261028182611_last_visit_for_outlet` and
+`20261028182637_geo_distance_search_path`.
+
+The new app must go out right after the database change. Until it does, the old app can still
+start visits but **cannot submit any visit started after the migration** (the checkout trigger
+wants a gate photo the old app never takes). Visits from before the migration are exempt. Once
+the new app is live, a stuck visit recovers on «كمّل الزيارة»: it goes through the gate photo,
+then back to the count.
+
+If the two `storage.objects` policies in `20261028182533_visit_photos.sql` fail with
+`must be owner of table objects`, create them from Dashboard → Storage → Policies with the
+same expressions (the file's header says how). `supabase/tests/batch_a_visits.test.sql` is a
+dry run: paste the migrations and the test between `begin;` and `rollback;` and it reports every
+check and keeps nothing.
+
 ---
 
 ## Step 10 — Install on phones

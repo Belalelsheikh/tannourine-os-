@@ -1,8 +1,7 @@
 import { useApp } from '../lib/app';
-import { BUCKET_VISITS } from '../lib/supabase';
 import { cairoDateOf, cairoTime } from '../lib/cairo';
 import { FLAG_LABEL, ORDER_STATUS_LABEL, fmt } from '../lib/format';
-import { Pill, SecureImage } from './ui';
+import { Pill, VisitPhotos } from './ui';
 import type { Followup, Order, OrderLine, Visit, VisitLine } from '../lib/types';
 
 const STATUS: Record<string, { label: string; tone: 'r' | 'g' | 'y' | 'n' }> = {
@@ -80,6 +79,8 @@ export function VisitDetail({
         {v.checkout_at == null ? '—' : v.checkout_lat != null ? '✓' : '✗'}
         {' · '}
         {v.distance_m == null ? 'الموقع لسه ما اتحددش' : `${fmt(v.distance_m)} م من الفرع`}
+        {v.checkout_distance_m != null && <> · الإرسال على بعد {fmt(v.checkout_distance_m)} م من البدء</>}
+        {v.checkin_reason && <><br />سبب البعد عند البدء: {v.checkin_reason}</>}
       </p>
 
       {v.flags.length > 0 && (
@@ -113,12 +114,12 @@ export function VisitDetail({
         </div>
       )) : zeroCount > 0 && <p className="small" style={{ color: 'var(--crit)' }}>مفيش أوردر اتعمل</p>}
 
-      {v.photo_path && (
+      {v.checkout_at != null && (
         photoShown
-          ? <SecureImage bucket={BUCKET_VISITS} path={v.photo_path} />
+          ? <VisitPhotos visitId={v.id} legacyPath={v.photo_path} />
           : (
             <div className="btnrow">
-              <button className="mini" onClick={onShowPhoto}>شوف صورة الرف</button>
+              <button className="mini" onClick={onShowPhoto}>شوف الصور</button>
             </div>
           )
       )}

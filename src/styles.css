@@ -458,3 +458,17 @@ table.t { width: 100%; border-collapse: collapse; background: var(--card); font-
 .banner.off { background: var(--crit); }
 
 [hidden] { display: none !important; }
+
+/* Visit photos (Batch A3): thumbnails in the count form and the review gallery. */
+.pgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0; }
+.pcell { position: relative; margin: 0; }
+.pcell .thumb { height: 96px; max-height: none; margin: 0; }
+.pcell figcaption { text-align: center; }
+.pcell .del {
+  position: absolute; top: 2px; inset-inline-start: 2px; width: 26px; height: 26px;
+  border: 0; background: var(--ink); color: var(--paper); font-size: 14px; line-height: 26px; padding: 0;
+}
+.photorow { display: flex; gap: 6px; }
+.photorow .photo { flex: 1; }
+.lastvisit { width: 100%; text-align: start; margin-bottom: 10px; }
+.restored { margin-bottom: 10px; }

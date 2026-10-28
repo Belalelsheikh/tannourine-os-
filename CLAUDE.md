@@ -32,6 +32,12 @@ Follow PRD §17 exactly. After each phase, run the matching acceptance items fro
 - Visit submit is an UPDATE on the coordinator's own `pending` visit where `checkout_at is null`; retries after a partial failure may re-write `visit_lines` (policy `vlines_upd` allows upsert while the visit is still `pending`).
 - Invoice role may only move an order from `approved` to `invoiced` — the RLS `using`/`with check` pair enforces both ends.
 
+## Build notes from Batch A (2026-10-28: drafts, last visit, photos, geofence)
+- One exception to "GPS never blocks": a check-in > 150 m from a **verified** pin (`outlets.pin_verified`) is refused by the `visits_checkin_fence` trigger. Unverified pins only ask for `checkin_reason`; no pin or no GPS fix never blocks. Check-out is never blocked.
+- Pins are verified only through `confirm_outlet_pin()` (supervisor/mgmt, audited). `propose_outlet_pins()` runs nightly via pg_cron and only writes `pin_proposed_lat/lng`.
+- Photos live in `visit_photos` under `visit-photos/visits/<visit_id>/`. `visits.photo_path` is kept for one release (first non-gate photo) and then dropped.
+- The open visit's form is mirrored to `localStorage` `visit_draft:<visit_id>`; the checkout trigger refuses an incomplete count or a missing gate photo.
+
 ## Agent skills
 
 ### Issue tracker
