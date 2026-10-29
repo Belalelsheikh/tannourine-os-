@@ -42,9 +42,12 @@ function bitmapResizes(): Promise<boolean> {
   return resizeSupport;
 }
 
+/** Camera captures are 2–8 MB; below this a full decode is cheap and resize-by-width could enlarge. */
+const RESIZE_ON_DECODE_BYTES = 1_000_000;
+
 async function viaBitmap(file: Blob, maxEdge: number, quality: number): Promise<Blob> {
   let bitmap: ImageBitmap;
-  if (await bitmapResizes()) {
+  if (file.size > RESIZE_ON_DECODE_BYTES && await bitmapResizes()) {
     // The oriented size isn't known without decoding, so resize by width, then — for a
     // portrait shot — once more by height from the already-small bitmap.
     bitmap = await createImageBitmap(file, { resizeWidth: maxEdge, resizeQuality: 'high' });

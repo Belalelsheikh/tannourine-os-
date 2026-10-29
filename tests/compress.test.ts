@@ -58,13 +58,22 @@ test('bitmap path: resized while decoding, portrait fixed from the small bitmap,
     const name = `${width}x${height}`;
     return { width, height, close: () => closed.push(name) };
   };
+  const capture = new Blob([new Uint8Array(3_000_000)], { type: 'image/jpeg' });  // camera-sized
   canvases.length = 0;
-  const out = await compressImage(new Blob(['x'], { type: 'image/jpeg' }), 1280);
+  const out = await compressImage(capture, 1280);
   assert.equal(await out.text(), '960x1280');
   assert.deepEqual(calls.slice(1), [
     { resizeWidth: 1280, resizeQuality: 'high' },
     { resizeHeight: 1280, resizeQuality: 'high' },
   ]);
   assert.deepEqual(closed, ['1x1', '1280x1707', '960x1280']);
+
+  // A small file is decoded whole and never enlarged.
+  calls.length = 0;
+  closed.length = 0;
+  const small = await compressImage(new Blob(['x'], { type: 'image/jpeg' }), 5000);
+  assert.deepEqual(calls, [{}]);
+  assert.equal(await small.text(), '3000x4000');
+  assert.deepEqual(closed, ['3000x4000']);
   delete g.createImageBitmap;
 });

@@ -102,6 +102,8 @@ end $$;
 -- A gate photo in storage before its own check-in means the phone clock was ahead: the old
 -- client stamped checkin_at before opening the camera and uploaded before inserting the row.
 -- Move checkin_at to the upload time and checkout_at by the same offset (dwell is unchanged).
+-- Supervisor-closed (`unclosed`) visits shift too; their checkout_at was the supervisor's
+-- clock, so that one moves by the coordinator's offset — harmless, it carries no dwell.
 -- The guard freezes checkin_at on open visits, so it is off for this one statement.
 alter table visits disable trigger visits_checkout_guard;
 
@@ -121,7 +123,7 @@ with fix as (
   returning v.id
 )
 insert into audit_log (actor, action, entity, entity_id, detail)
-select null, 'fix_clock', 'visits', f.id::text, jsonb_build_object(
+select null::uuid, 'fix_clock', 'visits', f.id::text, jsonb_build_object(
          'old_checkin_at', f.old_in, 'new_checkin_at', f.new_in,
          'old_checkout_at', f.old_out, 'new_checkout_at', f.old_out - (f.old_in - f.new_in),
          'offset_seconds', round(extract(epoch from f.old_in - f.new_in)))
