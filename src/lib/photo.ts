@@ -1,30 +1,7 @@
 import { sb } from './supabase';
 import type { VisitPhoto } from './types';
 
-/** Client-side compress: longest edge 1024px, JPEG q0.7 (PRD §5.3). */
-export function compressImage(file: File, maxEdge = 1024, quality = 0.7): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      const scale = Math.min(1, maxEdge / Math.max(img.width, img.height));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.round(img.width * scale);
-      canvas.height = Math.round(img.height * scale);
-      const ctx = canvas.getContext('2d');
-      if (!ctx) { reject(new Error('canvas غير متاح')); return; }
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob(
-        (blob) => (blob ? resolve(blob) : reject(new Error('فشل ضغط الصورة'))),
-        'image/jpeg',
-        quality,
-      );
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('ملف الصورة غير صالح')); };
-    img.src = url;
-  });
-}
+export { compressImage } from './compress';
 
 /**
  * Upload with upsert so a retry after a partial failure overwrites rather than

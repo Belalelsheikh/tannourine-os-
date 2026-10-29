@@ -61,3 +61,36 @@ test('pruneDrafts drops drafts for visits that are no longer open', () => {
   assert.deepEqual(draftVisitIds(s), ['open']);
   assert.equal(s.getItem('tn_gps_notice_seen'), '1');
 });
+
+// ---------- gate draft (Batch A5) ----------
+import { clearGateDraft, gateDraftKey, loadGateDraft, saveGateDraft, type GateDraft } from '../src/lib/visitDraft.ts';
+
+const gate = (p: Partial<GateDraft> = {}): GateDraft => ({
+  v: 1, visit_id: 'g1', photo_id: 'p1', coordinator_id: 'c1', outlet_id: 0,
+  checkin_at: '2026-10-29T08:00:00Z', off_route: false, reason: '', pos: { lat: 30, lng: 31 },
+  saved_at: '2026-10-29T08:00:00Z',
+  ...p,
+});
+
+test('gate draft is written under gate_draft:<visit_id> and removed like onReady/onCancel do', () => {
+  const s = new MemStore();
+  saveGateDraft(s, gate());
+  assert.ok(s.getItem(gateDraftKey('g1')));
+  assert.deepEqual(loadGateDraft(s, 'g1'), gate());
+  clearGateDraft(s, 'g1');
+  assert.equal(loadGateDraft(s, 'g1'), null);
+});
+
+test('pruneDrafts drops a gate draft once its visit is known closed, or after a day', () => {
+  const s = new MemStore();
+  const now = Date.parse('2026-10-29T09:00:00Z');
+  saveGateDraft(s, gate({ visit_id: 'open' }));
+  saveGateDraft(s, gate({ visit_id: 'closed' }));
+  saveGateDraft(s, gate({ visit_id: 'unacked' }));                       // insert never landed
+  saveGateDraft(s, gate({ visit_id: 'stale', saved_at: '2026-10-27T08:00:00Z' }));
+  pruneDrafts(s, new Set(['open']), new Set(['closed']), now);
+  assert.ok(loadGateDraft(s, 'open'));
+  assert.ok(loadGateDraft(s, 'unacked'));
+  assert.equal(loadGateDraft(s, 'closed'), null);
+  assert.equal(loadGateDraft(s, 'stale'), null);
+});

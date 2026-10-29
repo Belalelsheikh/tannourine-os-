@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp, useQuery } from '../../lib/app';
 import { sb, errText } from '../../lib/supabase';
 import { GPS_PRIVACY_LINE, gpsNoticeSeen, markGpsNoticeSeen } from '../../lib/geo';
-import { activeKey, pruneDrafts } from '../../lib/visitDraft';
+import { activeKey, loadGateDraft, pruneDrafts, type GateDraft } from '../../lib/visitDraft';
 import { ORD_LABEL, isToday, stampOf, todayISO } from '../../lib/format';
 import { Empty, ErrLine, Field, Hint, Pill, StatTiles } from '../../components/ui';
 import VisitForm from './VisitForm';
@@ -14,7 +14,7 @@ type View =
   | { k: 'list' }
   | { k: 'search' }
   | { k: 'outlet'; outletId: number; offRoute: boolean }
-  | { k: 'gate'; outlet: Outlet; offRoute: boolean; existing: Visit | null }
+  | { k: 'gate'; outlet: Outlet; offRoute: boolean; existing: Visit | null; draft: GateDraft | null }
   | { k: 'form'; visit: Visit; outlet: Outlet }
   | { k: 'order'; outlet: Outlet };
 
@@ -82,7 +82,7 @@ export default function RouteToday() {
       const gate = await sb.from('visit_photos').select('id').eq('visit_id', visit.id).eq('kind', 'gate').limit(1);
       if (gate.error) { setErr(errText(gate.error)); return; }
       if ((gate.data?.length ?? 0) === 0) {
-        setView({ k: 'gate', outlet, offRoute: visit.off_route, existing: visit });
+        setView({ k: 'gate', outlet, offRoute: visit.off_route, existing: visit, draft: null });
         return;
       }
     }
@@ -102,7 +102,7 @@ export default function RouteToday() {
         (v) => v.outlet_id === outlet.id && v.checkout_at == null && isToday(v.checkin_at),
       );
       if (existing) { await resume(existing, outlet); return; }
-      setView({ k: 'gate', outlet, offRoute, existing: null });
+      setView({ k: 'gate', outlet, offRoute, existing: null, draft: null });
     } finally {
       setStarting(false);
     }
@@ -115,23 +115,36 @@ export default function RouteToday() {
     if (!profile || visitsLoading || visitsError || resumedOnce.current) return;
     resumedOnce.current = true;
     const open = myVisits.filter((v) => v.checkout_at == null);
-    try { pruneDrafts(localStorage, new Set(open.map((v) => v.id))); } catch { /* ignore */ }
+    const closed = myVisits.filter((v) => v.checkout_at != null);
+    try {
+      pruneDrafts(localStorage, new Set(open.map((v) => v.id)), new Set(closed.map((v) => v.id)));
+    } catch { /* ignore */ }
     let activeId: string | null = null;
     try { activeId = localStorage.getItem(activeKey(profile.id)); } catch { /* ignore */ }
     const v = open.find((x) => x.id === activeId);
     const o = v ? outletById(v.outlet_id) : undefined;
-    if (v && o && view.k === 'list') void resume(v, o);
-    else if (activeId && !v) setActive(null);
+    if (v && o && view.k === 'list') { void resume(v, o); return; }
+    if (!activeId || v) return;
+    // Killed between the camera tap and the server ack (A5): the row may never have landed.
+    // Back to the gate step with the same ids, unless that visit is known or from another day.
+    const gd = loadGateDraft(localStorage, activeId);
+    const go = gd ? outletById(gd.outlet_id) : undefined;
+    if (gd && go && gd.coordinator_id === profile.id && isToday(gd.checkin_at)
+      && !closed.some((x) => x.id === activeId) && view.k === 'list') {
+      setView({ k: 'gate', outlet: go, offRoute: gd.off_route, existing: null, draft: gd });
+    } else setActive(null);
   }, [profile?.id, visitsLoading, visitsError, myVisits]);
 
   // ---------- check-in: fence + gate photo ----------
   if (view.k === 'gate') {
     return (
       <GateStep
-        key={view.existing?.id ?? `new-${view.outlet.id}`}
+        key={view.existing?.id ?? view.draft?.visit_id ?? `new-${view.outlet.id}`}
         outlet={view.outlet}
         offRoute={view.offRoute}
         existing={view.existing}
+        draft={view.draft}
+        onStart={setActive}
         onCancel={() => { setActive(null); bump(); setView({ k: 'outlet', outletId: view.outlet.id, offRoute: view.offRoute }); }}
         onReady={(visit) => {
           bump();

@@ -37,6 +37,9 @@ Follow PRD §17 exactly. After each phase, run the matching acceptance items fro
 - Pins are verified only through `confirm_outlet_pin()` (supervisor/mgmt, audited). `propose_outlet_pins()` runs nightly via pg_cron and only writes `pin_proposed_lat/lng`.
 - Photos live in `visit_photos` under `visit-photos/visits/<visit_id>/`. `visits.photo_path` is kept for one release (first non-gate photo) and then dropped.
 - The open visit's form is mirrored to `localStorage` `visit_draft:<visit_id>`; the checkout trigger refuses an incomplete count or a missing gate photo.
+- Check-in order (A5, 2026-10-29): **row first, then photo.** On the camera tap, in the same gesture: write `gate_draft:<visit_id>` + `visit_active`, `click()` the file input synchronously (iOS refuses it after an await), then send the visits insert. The upload and gate row follow when the photo returns (`completeGate`). Phones kill the page while the camera is open; the reload resumes the open visit (or the gate draft if the insert never landed) on the photo step. Never move the insert back behind the camera.
+- `checkin_at` / `checkout_at` are the server's when the phone is > 5 min off; `dwell_seconds` and `short_visit` are recomputed from the stored stamps by `visits_checkout_guard`. Don't trust phone time for ordering or dwell.
+- `compressImage` (src/lib/compress.ts) resizes during decode via `createImageBitmap` where supported; the `<img>` path is the fallback. Don't decode full-resolution captures on the main path.
 
 ## Agent skills
 

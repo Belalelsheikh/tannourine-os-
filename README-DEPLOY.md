@@ -213,6 +213,23 @@ same expressions (the file's header says how). `supabase/tests/batch_a_visits.te
 dry run: paste the migrations and the test between `begin;` and `rollback;` and it reports every
 check and keeps nothing.
 
+### Batch A5 (2026-10-29): gate step survives the camera, server check-in time
+
+Applied to production on 2026-10-29 at 15:28 Cairo time as `20261029122814_checkin_server_time`,
+after a matching dry run. The backfill corrected 3 visits (all رجب أحمد, 57–58 min fast).
+
+`20261029122814_checkin_server_time.sql`. Either order works with either app — the old app's
+times are clamped and its dwell recomputed by the trigger, and the new app runs on the old
+database — but keep the habit: database first, app straight after. Apply it **after the field
+day** (after ~18:00 Cairo): the backfill briefly disables `visits_checkout_guard`, which locks
+`visits` for the length of one UPDATE. Dry run first: paste the migration and
+`supabase/tests/batch_a5_server_time.test.sql` between `begin;` and `rollback;`; the expected
+line is in the test's header. Corrected visits show up as `audit_log` rows with
+`action = 'fix_clock'`.
+
+After the app deploys, ask the team to close the app and open it again once (the PWA updates on
+the next launch).
+
 ---
 
 ## Step 10 — Install on phones
