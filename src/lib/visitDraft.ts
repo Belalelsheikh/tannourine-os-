@@ -73,7 +73,66 @@ export function draftVisitIds(s: Store): string[] {
   }, []);
 }
 
-/** Drop drafts whose visit is no longer open for this coordinator (submitted, or closed by a supervisor). */
-export function pruneDrafts(s: Store, openVisitIds: Set<string>): void {
+/**
+ * Drop drafts whose visit is no longer open for this coordinator (submitted, or closed by a
+ * supervisor). A gate draft may belong to a visit whose insert never reached the server, so
+ * it goes only once that visit is known closed, or after a day.
+ */
+export function pruneDrafts(s: Store, openVisitIds: Set<string>, closedVisitIds = new Set<string>(), now = Date.now()): void {
   for (const id of draftVisitIds(s)) if (!openVisitIds.has(id)) clearDraft(s, id);
+  for (const id of gateDraftVisitIds(s)) {
+    if (openVisitIds.has(id)) continue;
+    const d = loadGateDraft(s, id);
+    if (!d || closedVisitIds.has(id) || now - Date.parse(d.saved_at) > GATE_DRAFT_TTL_MS) clearGateDraft(s, id);
+  }
+}
+
+/**
+ * The check-in in flight (Batch A5), written on the camera tap before the visit insert is
+ * acknowledged. If the browser is killed in the camera before the insert lands, a reload
+ * reopens the gate step with the same ids, outlet and check-in time instead of the route list.
+ */
+export interface GateDraft {
+  v: 1;
+  visit_id: string;
+  photo_id: string;
+  coordinator_id: string;
+  outlet_id: number;
+  checkin_at: string;
+  off_route: boolean;
+  reason: string;
+  pos: { lat: number; lng: number } | null;
+  saved_at: string;
+}
+
+const GATE_PREFIX = 'gate_draft:';
+const GATE_DRAFT_TTL_MS = 24 * 3600 * 1000;
+export const gateDraftKey = (visitId: string) => `${GATE_PREFIX}${visitId}`;
+
+export function parseGateDraft(raw: string | null): GateDraft | null {
+  if (!raw) return null;
+  try {
+    const d = JSON.parse(raw) as Partial<GateDraft>;
+    if (d.v !== 1 || typeof d.visit_id !== 'string' || typeof d.photo_id !== 'string'
+      || typeof d.coordinator_id !== 'string' || typeof d.outlet_id !== 'number'
+      || typeof d.checkin_at !== 'string' || typeof d.saved_at !== 'string') return null;
+    return d as GateDraft;
+  } catch {
+    return null;
+  }
+}
+
+export const loadGateDraft = (s: Store, visitId: string) => safe(() => parseGateDraft(s.getItem(gateDraftKey(visitId))), null);
+export const saveGateDraft = (s: Store, d: GateDraft) => safe(() => { s.setItem(gateDraftKey(d.visit_id), JSON.stringify(d)); return true; }, false);
+export const clearGateDraft = (s: Store, visitId: string) => safe(() => s.removeItem(gateDraftKey(visitId)), undefined);
+
+export function gateDraftVisitIds(s: Store): string[] {
+  return safe(() => {
+    const out: string[] = [];
+    for (let i = 0; i < s.length; i++) {
+      const k = s.key(i);
+      if (k?.startsWith(GATE_PREFIX)) out.push(k.slice(GATE_PREFIX.length));
+    }
+    return out;
+  }, []);
 }
