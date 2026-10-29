@@ -1,4 +1,4 @@
--- Batch A5 dry-run: apply 20261029090000_checkin_server_time.sql inside a transaction, run as a
+-- Batch A5 dry-run: apply 20261029122814_checkin_server_time.sql inside a transaction, run as a
 -- real coordinator under RLS, report, and roll back. Same pattern as batch_a_visits.test.sql:
 -- the block ends with `raise exception 'RESULTS …'` so nothing is ever kept.
 -- Expected: 1 ok; 2 ok; 3 gate_photo_required; 4 ok dwell=600 short=false; 5 dwell=60 short=true;

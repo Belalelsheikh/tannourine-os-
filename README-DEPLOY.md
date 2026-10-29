@@ -215,7 +215,10 @@ check and keeps nothing.
 
 ### Batch A5 (2026-10-29): gate step survives the camera, server check-in time
 
-`20261029090000_checkin_server_time.sql`. Either order works with either app — the old app's
+Applied to production on 2026-10-29 at 15:28 Cairo time as `20261029122814_checkin_server_time`,
+after a matching dry run. The backfill corrected 3 visits (all رجب أحمد, 57–58 min fast).
+
+`20261029122814_checkin_server_time.sql`. Either order works with either app — the old app's
 times are clamped and its dwell recomputed by the trigger, and the new app runs on the old
 database — but keep the habit: database first, app straight after. Apply it **after the field
 day** (after ~18:00 Cairo): the backfill briefly disables `visits_checkout_guard`, which locks
