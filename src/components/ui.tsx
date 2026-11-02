@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { compressImage, signedUrl, sortVisitPhotos } from '../lib/photo';
 import { sb, BUCKET_VISITS } from '../lib/supabase';
-import { PHOTO_KIND_LABEL } from '../lib/format';
+import { PHOTO_KIND_LABEL, fmt0 } from '../lib/format';
 import type { VisitPhoto } from '../lib/types';
 import { parseCount } from '../lib/numerals';
 
@@ -32,13 +32,12 @@ export function StatTiles({ items }: { items: { n: ReactNode; label: string; ton
 
 /** Stepper input (− value +) — the only quantity control in the system (PRD §11). */
 export function Stepper({
-  value, onChange, allowEmpty = false, placeholder,
+  value, onChange, allowEmpty = false,
 }: {
   value: number | null;
   onChange: (v: number | null) => void;
+  /** Empty shows «—». The last visit's count is a line under the SKU, not in here (A6). */
   allowEmpty?: boolean;
-  /** Grey reference shown while empty — the last visit's count (Batch A2). */
-  placeholder?: string;
 }) {
   const step = (d: number) => onChange(Math.max(0, (value ?? 0) + d));
   return (
@@ -48,7 +47,7 @@ export function Stepper({
         inputMode="numeric"
         className={value === 0 ? 'zero' : ''}
         value={value === null ? '' : String(value)}
-        placeholder={placeholder ?? (allowEmpty ? '—' : '0')}
+        placeholder={allowEmpty ? '—' : '0'}
         /*
          * Select on focus so the first keystroke replaces the standing value instead of
          * landing beside it: tapping the centred «0» put the caret before it, so typing 12
@@ -133,16 +132,25 @@ export function SecureImage({ bucket, path }: { bucket: string; path: string | n
 /**
  * Every photo of a visit for review: gate photo first (proof of presence), then the rest.
  * Falls back to the legacy single `photo_path` if the visit predates visit_photos.
+ * A gate photo from the file fallback, or one whose bytes match another visit's, gets a
+ * warning pill (A6) — informational for review, never a block.
  */
 export function VisitPhotos({ visitId, legacyPath }: { visitId: string; legacyPath?: string | null }) {
   const [photos, setPhotos] = useState<VisitPhoto[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [reused, setReused] = useState(false);
   useEffect(() => {
     let alive = true;
     void sb.from('visit_photos').select('*').eq('visit_id', visitId).then(({ data, error }) => {
       if (!alive) return;
-      if (error) setErr(error.message);
-      else setPhotos(sortVisitPhotos((data ?? []) as VisitPhoto[]));
+      if (error) { setErr(error.message); return; }
+      const rows = (data ?? []) as VisitPhoto[];
+      setPhotos(sortVisitPhotos(rows));
+      const gate = rows.find((p) => p.kind === 'gate' && p.sha256);
+      if (gate) {
+        void sb.from('visit_photos').select('id').eq('sha256', gate.sha256!).neq('visit_id', visitId).limit(1)
+          .then(({ data: dup }) => { if (alive) setReused((dup?.length ?? 0) > 0); });
+      }
     });
     return () => { alive = false; };
   }, [visitId]);
@@ -157,6 +165,10 @@ export function VisitPhotos({ visitId, legacyPath }: { visitId: string; legacyPa
         <figure key={p.id} className="pcell">
           <SecureImage bucket={BUCKET_VISITS} path={p.path} />
           <figcaption className="small">{PHOTO_KIND_LABEL[p.kind]}</figcaption>
+          {p.kind === 'gate' && p.source === 'file' && (
+            <Pill tone="y">صورة من ملف{p.file_age_s != null ? ` · منذ ${fmt0(p.file_age_s)} ث` : ''}</Pill>
+          )}
+          {p.kind === 'gate' && reused && <Pill tone="y">صورة متكررة</Pill>}
         </figure>
       ))}
     </div>

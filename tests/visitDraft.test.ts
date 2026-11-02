@@ -94,3 +94,25 @@ test('pruneDrafts drops a gate draft once its visit is known closed, or after a 
   assert.equal(loadGateDraft(s, 'closed'), null);
   assert.equal(loadGateDraft(s, 'stale'), null);
 });
+
+// ---------- naming the empty field (Batch A6) ----------
+import { NOT_STOCKED, firstIncomplete, isNotStocked } from '../src/lib/visitDraft.ts';
+
+const skus = [{ id: 'A' }, { id: 'B' }];
+const full = { shelf: 2, warehouse: 1, sold: 0, reason: null };
+
+test('firstIncomplete names the first gap in form order', () => {
+  assert.deepEqual(firstIncomplete({ A: full, B: { ...full, shelf: null } }, skus), { skuId: 'B', field: 'shelf' });
+  assert.deepEqual(firstIncomplete({ A: { ...full, warehouse: null }, B: blankLine() }, skus), { skuId: 'A', field: 'warehouse' });
+  assert.deepEqual(firstIncomplete({ A: full, B: { ...full, sold: null } }, skus), { skuId: 'B', field: 'sold' });
+  assert.deepEqual(firstIncomplete({ A: { ...full, shelf: 0 }, B: full }, skus), { skuId: 'A', field: 'reason' });
+  assert.deepEqual(firstIncomplete({ A: full }, skus), { skuId: 'B', field: 'shelf' }, 'missing line = blank');
+  assert.equal(firstIncomplete({ A: full, B: { ...full, shelf: 0, reason: 'مساحة الرف' } }, skus), null);
+});
+
+test('«الصنف مش في الفرع» is a complete line, recognised only exactly', () => {
+  assert.equal(lineComplete(NOT_STOCKED), true);
+  assert.equal(isNotStocked({ ...NOT_STOCKED }), true);
+  assert.equal(isNotStocked({ ...NOT_STOCKED, warehouse: 1 }), false);
+  assert.equal(isNotStocked({ ...NOT_STOCKED, reason: 'المخزن فاضي' }), false);
+});

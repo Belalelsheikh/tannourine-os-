@@ -7,10 +7,10 @@ import {
 import {
   FAR_FROM_PIN_METRES, SHORT_VISIT_SECONDS, getPosition, haversine,
 } from '../../lib/geo';
-import { PHOTO_KIND_LABEL, REASONS } from '../../lib/format';
+import { PHOTO_KIND_LABEL, REASONS, fmt0 } from '../../lib/format';
 import {
-  blankLine, clearDraft, lineComplete, lineTouched, loadDraft, restorable, saveDraft,
-  type DraftLine, type DraftPhoto,
+  NOT_STOCKED, blankLine, clearDraft, firstIncomplete, isNotStocked, lineComplete, lineTouched,
+  loadDraft, restorable, saveDraft, type DraftLine, type DraftPhoto, type LineField,
 } from '../../lib/visitDraft';
 import { ErrLine, Hint, SecureImage, Segmented, Stepper } from '../../components/ui';
 import LastVisit, { type LastVisitData } from './LastVisit';
@@ -21,6 +21,8 @@ const DRAFT_DEBOUNCE_MS = 300;
 const LINE_SYNC_MS = 1500;
 
 const EXTRA_KINDS: PhotoKind[] = ['shelf', 'cooler', 'other'];
+
+const FIELD_NAME: Record<Exclude<LineField, 'reason'>, string> = { shelf: 'الرف', warehouse: 'المخزن', sold: 'البيع' };
 
 /** Checkout-trigger errors, in the coordinator's words. */
 function submitError(e: unknown): string {
@@ -59,6 +61,9 @@ export default function VisitForm({
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(0);
+  /** The SKU the last failed submit pointed at; outlined until its line is complete. */
+  const [attn, setAttn] = useState<string | null>(null);
+  const blocks = useRef<Record<string, HTMLDivElement | null>>({});
 
   const camRef = useRef<HTMLInputElement>(null);
   const galRef = useRef<HTMLInputElement>(null);
@@ -185,16 +190,13 @@ export default function VisitForm({
   // ---------- submit = checkout ----------
   const submit = async () => {
     setErr(null);
-    for (const s of skus) {
-      const l = lines[s.id];
-      if (l.shelf === null || l.warehouse === null || l.sold === null) {
-        setErr('في خانات فاضية — اكتب صفر لو مفيش');
-        return;
-      }
-      if (l.shelf === 0 && !l.reason) {
-        setErr('حدد سبب الصفر لكل صنف ناقص');
-        return;
-      }
+    const gap = firstIncomplete(lines, skus);
+    if (gap) {
+      const name = skus.find((s) => s.id === gap.skuId)?.name_ar ?? '';
+      setErr(gap.field === 'reason' ? `${name} — حدد سبب الصفر` : `${name} — خانة ${FIELD_NAME[gap.field]} فاضية`);
+      setAttn(gap.skuId);
+      blocks.current[gap.skuId]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
     }
     if (uploading > 0) { setErr('استنى الصور تخلص رفع'); return; }
 
@@ -281,6 +283,7 @@ export default function VisitForm({
   };
 
   const lastLine = (skuId: string) => last?.lines.find((l) => l.sku_id === skuId);
+  const completeCount = skus.filter((s) => lineComplete(lines[s.id])).length;
   const full = photos.length + uploading >= MAX_VISIT_PHOTOS;
   const pick = (e: ChangeEvent<HTMLInputElement>) => {
     const files = [...(e.target.files ?? [])];
@@ -293,7 +296,7 @@ export default function VisitForm({
       {restored && <p className="hint restored"><b>تم استرجاع بيانات الزيارة</b></p>}
       {last && <LastVisit last={last} />}
       <Hint>
-        <b>{outlet.name}</b> — اكتب صفر لو مفيش — ممنوع خانة فاضية
+        <b>{outlet.name}</b> — اكتب صفر لو مفيش — أو اضغط «الصنف مش في الفرع»
       </Hint>
 
       {skus.map((s) => {
@@ -301,25 +304,41 @@ export default function VisitForm({
         const prev = lastLine(s.id);
         return (
           <div
-            className="sku"
+            className={`sku${attn === s.id && !lineComplete(l) ? ' attention' : ''}`}
             key={s.id}
+            ref={(el) => { blocks.current[s.id] = el; }}
             onBlur={(e) => {
               if (!e.currentTarget.contains(e.relatedTarget as Node | null)) void syncLine(s.id);
             }}
           >
             <h3>
-              {s.name_ar}
-              <span className="tag">{s.line === 'VIA' ? 'ڤيا' : ''}</span>
+              <span>
+                {s.name_ar}
+                {s.line === 'VIA' && <span className="tag"> ڤيا</span>}
+              </span>
+              <button
+                type="button"
+                className="absent"
+                aria-pressed={isNotStocked(l)}
+                onClick={() => patch(s.id, isNotStocked(l) ? blankLine() : { ...NOT_STOCKED })}
+              >
+                الصنف مش في الفرع
+              </button>
             </h3>
+            {prev && (
+              <p className="small prev">
+                آخر زيارة: رف {fmt0(prev.shelf)} · مخزن {fmt0(prev.warehouse)} · بيع {fmt0(prev.sold_cases)}
+              </p>
+            )}
             <div className="fields">
               <div className="fcell">
                 <label>رف <em>*</em></label>
-                <Stepper allowEmpty value={l.shelf} placeholder={prev ? String(prev.shelf) : undefined}
+                <Stepper allowEmpty value={l.shelf}
                   onChange={(v) => patch(s.id, { shelf: v })} />
               </div>
               <div className="fcell">
                 <label>مخزن <em>*</em></label>
-                <Stepper allowEmpty value={l.warehouse} placeholder={prev ? String(prev.warehouse) : undefined}
+                <Stepper allowEmpty value={l.warehouse}
                   onChange={(v) => patch(s.id, { warehouse: v })} />
               </div>
               <div className="fcell span">
@@ -386,7 +405,7 @@ export default function VisitForm({
 
       <ErrLine>{err}</ErrLine>
       <button className="send" onClick={() => void submit()} disabled={busy}>
-        {busy ? 'جارٍ الإرسال…' : 'إرسال'}
+        {busy ? 'جارٍ الإرسال…' : `إرسال الزيارة — ${completeCount}/${skus.length} أصناف`}
       </button>
       <button className="ghost" onClick={onCancel} disabled={busy}>رجوع (الزيارة تفضل مفتوحة)</button>
     </>

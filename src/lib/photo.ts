@@ -31,7 +31,10 @@ export const visitPhotoPath = (visitId: string, photoId: string) => `visits/${vi
  * Record an uploaded photo. A replayed gate insert hits the one-gate-per-visit index (23505);
  * that means the first attempt landed, so hand back the row that is already there.
  */
-export async function insertVisitPhoto(row: Omit<VisitPhoto, 'taken_at'>): Promise<VisitPhoto> {
+export async function insertVisitPhoto(
+  row: Omit<VisitPhoto, 'taken_at' | 'source' | 'file_age_s' | 'sha256'>
+    & Partial<Pick<VisitPhoto, 'source' | 'file_age_s' | 'sha256'>>,
+): Promise<VisitPhoto> {
   const { data, error } = await sb.from('visit_photos').insert(row).select('*').single();
   if (!error) return data as VisitPhoto;
   if (error.code === '23505' && row.kind === 'gate') {

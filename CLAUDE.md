@@ -41,6 +41,11 @@ Follow PRD §17 exactly. After each phase, run the matching acceptance items fro
 - `checkin_at` / `checkout_at` are the server's when the phone is > 5 min off; `dwell_seconds` and `short_visit` are recomputed from the stored stamps by `visits_checkout_guard`. Don't trust phone time for ordering or dwell.
 - `compressImage` (src/lib/compress.ts) resizes during decode via `createImageBitmap` where supported; the `<img>` path is the fallback. Don't decode full-resolution captures on the main path.
 
+## Build notes from Batch A6 (2026-11-02: gate photo source, form clarity)
+- Gate photo is camera-only: the main path is the in-page camera (`LiveCamera`, getUserMedia, `visit_photos.source = 'live'`), because a file input's `capture` is only a hint and some Android browsers offer the gallery through it. The file input is a visible fallback after getUserMedia fails, never automatic; it refuses files older than 120 s by `lastModified` (checked before `compressImage`, which drops metadata) and records `source = 'file'` + `file_age_s`. Every gate row carries `sha256` for reuse detection. Never add an `<input type="file">` without `capture` to the gate step.
+- With LiveCamera the page is no longer killed by a camera app, but keep A5's order: draft + `visit_active` + insert on the first camera tap.
+- Visit form errors name the SKU and field via `firstIncomplete()` (src/lib/visitDraft.ts); last-visit counts are a line under the SKU name, never a Stepper placeholder (it read as a typed value).
+
 ## Agent skills
 
 ### Issue tracker

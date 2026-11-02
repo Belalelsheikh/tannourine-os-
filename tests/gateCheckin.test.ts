@@ -2,11 +2,15 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { completeGate, type GateDeps, type InsertResult } from '../src/lib/gateCheckin.ts';
 import type { Visit } from '../src/lib/types';
+import {
+  CAMERA_PERMISSION_HINT, cameraErrorText, fileAgeSeconds, fileFresh, sha256Hex, type GatePhotoMeta,
+} from '../src/lib/gatePhoto.ts';
 
 const visit = { id: 'v1', coordinator_id: 'c1', outlet_id: 0, checkin_at: '2026-10-29T08:00:00Z' } as Visit;
 const photo = new Blob(['jpeg']);
-const args = (pending: Promise<InsertResult> | null) => ({
-  visitId: 'v1', existing: null, pending, photo, path: 'visits/v1/p1.jpg', photoId: 'p1', pos: { lat: 30, lng: 31 },
+const live = { source: 'live' as const, file_age_s: null, sha256: 'abc' };
+const args = (pending: Promise<InsertResult> | null, meta: GatePhotoMeta = live) => ({
+  visitId: 'v1', existing: null, pending, photo, meta, path: 'visits/v1/p1.jpg', photoId: 'p1', pos: { lat: 30, lng: 31 },
 });
 
 /** Records every call; inserts answer from `answers` in order. */
@@ -27,7 +31,10 @@ test('the insert sent on the tap is awaited, not repeated', async () => {
   assert.deepEqual(res, { k: 'ready', visit });
   assert.equal(calls.insert, 0);
   assert.deepEqual(calls.upload, ['visits/v1/p1.jpg']);
-  assert.deepEqual(calls.gate, [{ id: 'p1', visit_id: 'v1', kind: 'gate', path: 'visits/v1/p1.jpg', lat: 30, lng: 31 }]);
+  assert.deepEqual(calls.gate, [{
+    id: 'p1', visit_id: 'v1', kind: 'gate', path: 'visits/v1/p1.jpg', lat: 30, lng: 31,
+    source: 'live', file_age_s: null, sha256: 'abc',
+  }]);
 });
 
 test('a 23505 on the visit insert re-fetches the row and uploads the gate photo once', async () => {
@@ -66,4 +73,44 @@ test('an existing visit skips the insert', async () => {
   assert.equal(res.k, 'ready');
   assert.equal(calls.insert, 0);
   assert.equal(calls.upload.length, 1);
+});
+
+// ---------- gate photo source (Batch A6) ----------
+
+test('a file-fallback photo records its source and age on the gate row', async () => {
+  const { calls, deps } = fakes([]);
+  const meta = { source: 'file' as const, file_age_s: 14, sha256: 'def' };
+  await completeGate(args(Promise.resolve({ data: visit, error: null }), meta), deps);
+  assert.deepEqual(calls.gate, [{
+    id: 'p1', visit_id: 'v1', kind: 'gate', path: 'visits/v1/p1.jpg', lat: 30, lng: 31, ...meta,
+  }]);
+});
+
+test('a 23505 replay still carries the source', async () => {
+  const { calls, deps } = fakes([]);
+  const dup = Promise.resolve({ data: null, error: { code: '23505', message: 'duplicate key' } });
+  await completeGate(args(dup, { source: 'file', file_age_s: 3, sha256: null }), deps);
+  assert.equal((calls.gate[0] as { source: string }).source, 'file');
+});
+
+test('a file is fresh only within 2 minutes of the pick, allowing a minute of clock skew', () => {
+  const now = Date.parse('2026-11-02T10:00:00Z');
+  assert.equal(fileAgeSeconds(now - 30_000, now), 30);
+  assert.equal(fileFresh(fileAgeSeconds(now - 30_000, now)), true);     // camera capture
+  assert.equal(fileFresh(fileAgeSeconds(now - 121_000, now)), false);   // gallery pick
+  assert.equal(fileFresh(fileAgeSeconds(now + 50_000, now)), true);     // phone clock behind
+  assert.equal(fileFresh(fileAgeSeconds(now + 90_000, now)), false);
+  assert.equal(fileFresh(fileAgeSeconds(0, now)), false);               // lastModified missing
+});
+
+test('camera errors map to Arabic text; a refusal shows the Chrome permission path', () => {
+  assert.equal(cameraErrorText('NotAllowedError'), CAMERA_PERMISSION_HINT);
+  assert.match(cameraErrorText('NotReadableError'), /مشغولة/);
+  assert.match(cameraErrorText('NotFoundError'), /مش لاقي/);
+  assert.match(cameraErrorText(undefined), /مش بيفتح/);
+});
+
+test('sha256Hex is the hex digest of the bytes', async () => {
+  assert.equal(await sha256Hex(new Blob(['abc'])),
+    'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
 });

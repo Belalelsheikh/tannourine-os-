@@ -96,6 +96,10 @@ export interface VisitPhoto {
   taken_at: string;
   lat: number | null;
   lng: number | null;
+  /** Gate photos (A6): in-page camera frame, or the file-input fallback. Other kinds stay 'file'. */
+  source: 'live' | 'file';
+  file_age_s: number | null;
+  sha256: string | null;
 }
 
 export interface VisitLine {
