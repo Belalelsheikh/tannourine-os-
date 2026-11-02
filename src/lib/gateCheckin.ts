@@ -1,5 +1,6 @@
 import { fenceError, type CheckinDecision } from './geofence.ts';
 import type { Coords } from './geo.ts';
+import type { GatePhotoMeta } from './gatePhoto.ts';
 import type { Visit } from './types';
 
 /**
@@ -19,7 +20,9 @@ export interface GateDeps {
   insertVisit: () => Promise<InsertResult>;
   fetchVisit: (id: string) => Promise<Visit>;
   uploadPhoto: (path: string, blob: Blob) => Promise<void>;
-  insertGatePhoto: (row: { id: string; visit_id: string; kind: 'gate'; path: string; lat: number | null; lng: number | null }) => Promise<unknown>;
+  insertGatePhoto: (row: {
+    id: string; visit_id: string; kind: 'gate'; path: string; lat: number | null; lng: number | null;
+  } & GatePhotoMeta) => Promise<unknown>;
 }
 
 export type GateResult = { k: 'ready'; visit: Visit } | { k: 'fence'; decision: CheckinDecision };
@@ -31,6 +34,8 @@ export async function completeGate(
     /** The insert started on the camera tap; null on a retry, which inserts again. */
     pending: Promise<InsertResult> | null;
     photo: Blob;
+    /** Live frame or file fallback (A6), recorded on the gate row for review. */
+    meta: GatePhotoMeta;
     path: string;
     photoId: string;
     pos: Coords | null;
@@ -53,6 +58,7 @@ export async function completeGate(
   await d.insertGatePhoto({
     id: a.photoId, visit_id: visit.id, kind: 'gate', path: a.path,
     lat: a.pos?.lat ?? null, lng: a.pos?.lng ?? null,
+    ...a.meta,
   });
   return { k: 'ready', visit };
 }

@@ -34,6 +34,30 @@ export function lineComplete(l: DraftLine): boolean {
   return l.shelf !== null && l.warehouse !== null && l.sold !== null && (l.shelf > 0 || l.reason !== null);
 }
 
+export type LineField = 'shelf' | 'warehouse' | 'sold' | 'reason';
+
+/**
+ * The first gap in form order (A6), so the error can name the SKU and the field instead of
+ * «في خانات فاضية». A missing line counts as blank.
+ */
+export function firstIncomplete(
+  lines: Record<string, DraftLine>, skus: { id: string }[],
+): { skuId: string; field: LineField } | null {
+  for (const s of skus) {
+    const l = lines[s.id] ?? blankLine();
+    if (l.shelf === null) return { skuId: s.id, field: 'shelf' };
+    if (l.warehouse === null) return { skuId: s.id, field: 'warehouse' };
+    if (l.sold === null) return { skuId: s.id, field: 'sold' };
+    if (l.shelf === 0 && l.reason === null) return { skuId: s.id, field: 'reason' };
+  }
+  return null;
+}
+
+/** The «الصنف مش في الفرع» shortcut: all zero, branch didn't order. */
+export const NOT_STOCKED: DraftLine = { shelf: 0, warehouse: 0, sold: 0, reason: 'الفرع لم يطلب' };
+export const isNotStocked = (l: DraftLine) =>
+  l.shelf === 0 && l.warehouse === 0 && l.sold === 0 && l.reason === NOT_STOCKED.reason;
+
 export const lineTouched = (l: DraftLine) =>
   l.shelf !== null || l.warehouse !== null || l.sold !== null || l.reason !== null;
 

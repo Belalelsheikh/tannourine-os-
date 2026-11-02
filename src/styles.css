@@ -341,6 +341,23 @@ body {
 .reason { padding: 9px 12px; border-top: 1px solid var(--line); background: #FCF6F4; }
 .reason p { font-size: 12px; color: var(--crit); font-weight: 600; margin-bottom: 7px; }
 
+/* A6: the block a failed submit points at — outlined until its line is complete. */
+.sku.attention { border-color: var(--crit); outline: 1px solid var(--crit); }
+.sku .prev { padding: 6px 12px 0; color: var(--mute); }
+.sku h3 .absent {
+  font-family: inherit;
+  font-size: 11.5px;
+  padding: 4px 9px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--slate);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.sku h3 .absent[aria-pressed='true'] { background: var(--ink); border-color: var(--ink); color: var(--paper); font-weight: 600; }
+
+.livecam video { width: 100%; max-height: 50vh; object-fit: cover; background: var(--ink); display: block; margin-bottom: 8px; }
+
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chips button {
   font-family: inherit;
