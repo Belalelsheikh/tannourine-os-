@@ -6,9 +6,15 @@ declare
   c uuid; o int; v1 uuid := gen_random_uuid(); sku text;
   out text := ''; i int; j record;
 begin
+  -- An outlet with a completed, non-unclosed visit, so check 4 has a base to find.
   select r.coordinator_id, r.outlet_id into c, o
     from routes r join profiles p on p.id = r.coordinator_id
-   where p.role = 'coordinator' and p.active limit 1;
+   where p.role = 'coordinator' and p.active
+     and exists (select 1 from visits x
+                  where x.outlet_id = r.outlet_id
+                    and x.checkout_at is not null and not ('unclosed' = any(x.flags)))
+   limit 1;
+  if c is null then raise exception 'SETUP no routed outlet has a completed visit'; end if;
   select id into sku from skus where active order by id limit 1;
   -- Close the coordinator's open visits the way a supervisor does (`unclosed` skips the
   -- checkout guard's count and gate checks), so the insert below is not a second open visit.
@@ -52,7 +58,8 @@ begin
   execute 'reset role';
   -- 4. comparison helpers
   select * into j from previous_visits(array[v1]);
-  out := out || '4 prev=' || coalesce(j.prev_id::text, 'none')
+  if j.prev_id is null then raise exception 'FAIL 4 prev=none at outlet % (%)', o, out; end if;
+  out := out || '4 prev=' || j.prev_id::text
               || ' lines=' || coalesce(jsonb_array_length(j.prev_lines), 0) || '; ';
   select count(*) into i from outlet_visit_summary() s where s.coordinator_id = c and s.outlet_id = o;
   out := out || '5 summary_row=' || i || '; ';
