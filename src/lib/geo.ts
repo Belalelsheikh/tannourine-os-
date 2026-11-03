@@ -42,3 +42,7 @@ export const GPS_PRIVACY_LINE =
 const PRIVACY_KEY = 'tn_gps_notice_seen';
 export const gpsNoticeSeen = () => localStorage.getItem(PRIVACY_KEY) === '1';
 export const markGpsNoticeSeen = () => localStorage.setItem(PRIVACY_KEY, '1');
+
+/** «افتح اليوم على الخريطة»: Google Maps directions through the points in order. No map library. */
+export const mapsDirUrl = (points: Coords[]) =>
+  `https://www.google.com/maps/dir/${points.map((p) => `${p.lat},${p.lng}`).join('/')}`;

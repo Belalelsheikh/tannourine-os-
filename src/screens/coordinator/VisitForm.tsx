@@ -13,6 +13,7 @@ import {
   loadDraft, restorable, saveDraft, type DraftLine, type DraftPhoto, type LineField,
 } from '../../lib/visitDraft';
 import { ErrLine, Hint, SecureImage, Segmented, Stepper } from '../../components/ui';
+import { risenSkus, type CountLine } from '../../lib/compare';
 import LastVisit, { type LastVisitData } from './LastVisit';
 import type { Outlet, PhotoKind, Visit, VisitLine, VisitPhoto } from '../../lib/types';
 
@@ -64,6 +65,14 @@ export default function VisitForm({
   /** The SKU the last failed submit pointed at; outlined until its line is complete. */
   const [attn, setAttn] = useState<string | null>(null);
   const blocks = useRef<Record<string, HTMLDivElement | null>>({});
+  /** Complete lines whose shelf + warehouse is above the last visit's (B5). */
+  const risen = last ? risenSkus(skus, skus.flatMap((s): CountLine[] => {
+    const l = lines[s.id];
+    return lineComplete(l)
+      ? [{ sku_id: s.id, shelf: l.shelf as number, warehouse: l.warehouse as number, sold_cases: l.sold as number }]
+      : [];
+  }), last.lines) : [];
+  const hasShelfPhoto = photos.some((p) => p.kind === 'shelf');
 
   const camRef = useRef<HTMLInputElement>(null);
   const galRef = useRef<HTMLInputElement>(null);
@@ -199,6 +208,13 @@ export default function VisitForm({
       return;
     }
     if (uploading > 0) { setErr('استنى الصور تخلص رفع'); return; }
+    // B5: stock above the last visit needs a shelf photo; otherwise photos stay optional.
+    if (risen.length > 0 && !hasShelfPhoto) {
+      const name = skus.find((s) => s.id === risen[0])?.name_ar ?? '';
+      setErr(`${name} — المخزون زاد عن الزيارة اللي فاتت، صوّر الرف (نوع الصورة «${PHOTO_KIND_LABEL.shelf}»)`);
+      setKind('shelf');
+      return;
+    }
 
     setBusy(true);
     try {
@@ -212,39 +228,48 @@ export default function VisitForm({
         zero_reason: lines[s.id].reason,
       }));
       const lineRes = await sb.from('visit_lines').upsert(rows, { onConflict: 'visit_id,sku_id' });
-      if (lineRes.error) throw lineRes.error;
-
-      // 2) checkout: second and final GPS read. The DB checks completeness and the gate photo,
-      // keeps far_checkin, and sets checkout_distance_m / far_checkout itself.
-      const pos = await getPosition();
-      const checkoutAt = new Date();
-      const dwell = Math.max(0, Math.round((checkoutAt.getTime() - new Date(visit.checkin_at).getTime()) / 1000));
-
-      let distance: number | null = null;
-      if (outlet.lat != null && outlet.lng != null && visit.checkin_lat != null && visit.checkin_lng != null) {
-        distance = haversine(
-          { lat: visit.checkin_lat, lng: visit.checkin_lng },
-          { lat: outlet.lat, lng: outlet.lng },
-        );
+      // Lines lock at checkout (B6), so the upsert fails on a retry whose checkout already
+      // landed but whose response was lost. The server's checkout_at tells that apart.
+      let submitted = false;
+      if (lineRes.error) {
+        const cur = await sb.from('visits').select('checkout_at').eq('id', visit.id).maybeSingle();
+        if (cur.error || cur.data?.checkout_at == null) throw lineRes.error;
+        submitted = true;
       }
 
-      const flags: string[] = visit.flags.filter((f) => f === 'far_checkin');
-      if (dwell < SHORT_VISIT_SECONDS) flags.push('short_visit');
-      if (distance != null && distance > FAR_FROM_PIN_METRES) flags.push('far_from_pin');
-      if (visit.checkin_lat == null) flags.push('no_checkin_gps');
-      if (!pos) flags.push('no_checkout_gps');
+      if (!submitted) {
+        // 2) checkout: second and final GPS read. The DB checks completeness and the gate photo,
+        // keeps far_checkin, and sets checkout_distance_m / far_checkout itself.
+        const pos = await getPosition();
+        const checkoutAt = new Date();
+        const dwell = Math.max(0, Math.round((checkoutAt.getTime() - new Date(visit.checkin_at).getTime()) / 1000));
 
-      const upd = await sb.from('visits').update({
-        checkout_at: checkoutAt.toISOString(),
-        checkout_lat: pos?.lat ?? null,
-        checkout_lng: pos?.lng ?? null,
-        dwell_seconds: dwell,
-        distance_m: distance,
-        // Kept for one release so photo-rate stats and «بدون صورة» still read it.
-        photo_path: photos[0]?.path ?? null,
-        flags,
-      }).eq('id', visit.id);
-      if (upd.error) throw upd.error;
+        let distance: number | null = null;
+        if (outlet.lat != null && outlet.lng != null && visit.checkin_lat != null && visit.checkin_lng != null) {
+          distance = haversine(
+            { lat: visit.checkin_lat, lng: visit.checkin_lng },
+            { lat: outlet.lat, lng: outlet.lng },
+          );
+        }
+
+        const flags: string[] = visit.flags.filter((f) => f === 'far_checkin');
+        if (dwell < SHORT_VISIT_SECONDS) flags.push('short_visit');
+        if (distance != null && distance > FAR_FROM_PIN_METRES) flags.push('far_from_pin');
+        if (visit.checkin_lat == null) flags.push('no_checkin_gps');
+        if (!pos) flags.push('no_checkout_gps');
+
+        const upd = await sb.from('visits').update({
+          checkout_at: checkoutAt.toISOString(),
+          checkout_lat: pos?.lat ?? null,
+          checkout_lng: pos?.lng ?? null,
+          dwell_seconds: dwell,
+          distance_m: distance,
+          // Kept for one release so photo-rate stats and «بدون صورة» still read it.
+          photo_path: photos[0]?.path ?? null,
+          flags,
+        }).eq('id', visit.id);
+        if (upd.error) throw upd.error;
+      }
 
       // Only now is the count safely on the server.
       done.current = true;
@@ -400,7 +425,11 @@ export default function VisitForm({
         </>
       )}
       <p className="small">
-        {uploading > 0 ? 'جارٍ رفع الصور…' : `${photos.length} من ${MAX_VISIT_PHOTOS} صور (اختياري)`}
+        {uploading > 0
+          ? 'جارٍ رفع الصور…'
+          : `${photos.length} من ${MAX_VISIT_PHOTOS} صور${risen.length > 0 && !hasShelfPhoto
+            ? ' — المخزون زاد عن الزيارة اللي فاتت، صورة الرف مطلوبة'
+            : ' (اختياري)'}`}
       </p>
 
       <ErrLine>{err}</ErrLine>

@@ -392,6 +392,11 @@ table.t { width: 100%; border-collapse: collapse; background: var(--card); font-
 .t td.mono { font-family: 'IBM Plex Mono', monospace; font-weight: 600; }
 .tscroll { overflow-x: auto; margin-bottom: 10px; }
 .t tr.crit td { background: #FBEDEA; }
+.t tr.rose td { background: #FBF3E2; }
+.compare { margin-top: 8px; }
+.t tr.clickrow { cursor: pointer; }
+.t tr.clickrow:hover td { background: #EEF2EF; }
+.compare .t td.mono { white-space: nowrap; }
 
 /* ---------- visits (الزيارات) ---------- */
 .daynav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }

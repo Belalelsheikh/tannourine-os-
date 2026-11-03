@@ -14,6 +14,7 @@ import TeamNow from './screens/supervisor/TeamNow';
 import Followups from './screens/supervisor/Followups';
 import SupCheques from './screens/supervisor/Cheques';
 import SupVisits from './screens/supervisor/Visits';
+import Branches from './screens/supervisor/Branches';
 import Approvals from './screens/supervisor/Approvals';
 import Intake from './screens/router/Intake';
 import Board from './screens/router/Board';
@@ -30,6 +31,7 @@ import Team from './screens/mgmt/Team';
 import RoutesBuilder from './screens/mgmt/RoutesBuilder';
 import OutletsEditor from './screens/mgmt/Outlets';
 import Visits, { type VisitFocus } from './screens/mgmt/Visits';
+import Reports from './screens/mgmt/Reports';
 
 /**
  * Cross-tab navigation: the dashboard opens a visit on the «الزيارات» tab; the supervisor's
@@ -61,6 +63,7 @@ const TABS: Record<Role, Tab[]> = {
     { id: 'now', label: 'الفريق الآن', render: () => <TeamNow /> },
     { id: 'fups', label: 'تنبيهات', render: () => <Followups /> },
     { id: 'visits', label: 'الزيارات', render: (nav) => <SupVisits onOpenFeed={nav.openFeed} /> },
+    { id: 'branches', label: 'الفروع', render: (nav) => <Branches onOpenFeed={nav.openFeed} /> },
     { id: 'chq', label: 'الشيكات', render: () => <SupCheques /> },
   ],
   router: [
@@ -69,6 +72,7 @@ const TABS: Record<Role, Tab[]> = {
     { id: 'feed', label: 'المتابعة', render: () => <Feed /> },
     { id: 'fups', label: 'تنبيهات', render: () => <Followups /> },
     visitsTab,
+    { id: 'branches', label: 'الفروع', render: (nav) => <Branches onOpenFeed={nav.openFeed} /> },
     { id: 'dash', label: 'لوحة', render: (nav) => <Dashboard readOnly onOpenVisit={nav.openVisit} /> },
   ],
   dispatch: [
@@ -89,12 +93,15 @@ const TABS: Record<Role, Tab[]> = {
   ],
   mgmt: [
     { id: 'dash', label: 'اللوحة', render: (nav) => <Dashboard onOpenVisit={nav.openVisit} /> },
+    { id: 'reports', label: 'التقارير', render: () => <Reports /> },
     visitsTab,
     { id: 'feed', label: 'المتابعة', render: () => <Feed /> },
+    { id: 'branches', label: 'الفروع', render: (nav) => <Branches onOpenFeed={nav.openFeed} /> },
     { id: 'stock', label: 'المخزون', render: () => <Stock /> },
     { id: 'team', label: 'الفريق', render: () => <Team /> },
     { id: 'routes', label: 'الخطوط', render: () => <RoutesBuilder /> },
-    { id: 'outlets', label: 'الفروع', render: () => <OutletsEditor /> },
+    // «الفروع» is the visit view above; this one edits outlet records.
+    { id: 'outlets', label: 'بيانات الفروع', render: () => <OutletsEditor /> },
   ],
 };
 
