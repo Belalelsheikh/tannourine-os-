@@ -53,8 +53,8 @@ export function firstIncomplete(
   return null;
 }
 
-/** The «الصنف مش في الفرع» shortcut: all zero, branch didn't order. */
-export const NOT_STOCKED: DraftLine = { shelf: 0, warehouse: 0, sold: 0, reason: 'الفرع لم يطلب' };
+/** The «الصنف مش في الفرع» shortcut: all zero, saved under its own reason (Batch C4). */
+export const NOT_STOCKED: DraftLine = { shelf: 0, warehouse: 0, sold: 0, reason: 'الصنف مش في الفرع' };
 export const isNotStocked = (l: DraftLine) =>
   l.shelf === 0 && l.warehouse === 0 && l.sold === 0 && l.reason === NOT_STOCKED.reason;
 

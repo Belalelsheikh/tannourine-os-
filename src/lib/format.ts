@@ -77,7 +77,13 @@ export const ORD_LABEL: Record<OrderingMode, string> = {
   mixed: 'إيميل أو مندوب',
 };
 
+/** The zero-shelf chips. «الصنف مش في الفرع» has its own button instead. */
 export const REASONS: ZeroReason[] = ['المخزن فاضي', 'الفرع لم يطلب', 'أوردر متأخر', 'مساحة الرف'];
+
+export const NOT_STOCKED_REASON: ZeroReason = 'الصنف مش في الفرع';
+
+/** Every stored value, for reports. */
+export const ALL_REASONS: ZeroReason[] = [...REASONS, NOT_STOCKED_REASON];
 
 export const FLAG_LABEL: Record<string, string> = {
   short_visit: 'زيارة قصيرة',

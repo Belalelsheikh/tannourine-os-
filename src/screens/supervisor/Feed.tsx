@@ -5,7 +5,19 @@ import { coordinatorsInScope } from '../../lib/scope';
 import { FLAG_LABEL, dwellText, fmt, stampOf, timeOf, todayISO } from '../../lib/format';
 import { ageLabel, calendarDaysAgo, closeUnfinishedPatch, missingPhoto, reviewQueue } from '../../lib/review';
 import { ActionButton, Empty, ErrLine, Pill, Sect, VisitPhotos } from '../../components/ui';
+import { VisitCompare, type CountSide } from '../../components/VisitCompare';
+import type { CountLine } from '../../lib/compare';
 import type { Visit, VisitLine } from '../../lib/types';
+
+/** Row of `previous_visits()`: the visit before each card's visit, at the same outlet. */
+interface PrevRow {
+  visit_id: string;
+  prev_id: string;
+  prev_checkin_at: string;
+  prev_checkout_at: string;
+  prev_coordinator_id: string;
+  prev_lines: CountLine[];
+}
 
 const FOUR_HOURS_MS = 4 * 60 * 60 * 1000;
 
@@ -15,10 +27,12 @@ interface FeedData {
   todayAll: Visit[];
   open: Visit[];
   lines: VisitLine[];
+  /** Keyed by the card's visit id; absent = first visit at the outlet. */
+  prev: Record<string, CountSide>;
   routedIds: string[];
 }
 
-const EMPTY: FeedData = { queue: [], reviewedToday: [], todayAll: [], open: [], lines: [], routedIds: [] };
+const EMPTY: FeedData = { queue: [], reviewedToday: [], todayAll: [], open: [], lines: [], prev: {}, routedIds: [] };
 
 export default function Feed() {
   const { profile, profiles, outletById, skuById, profileById, bump, toast } = useApp();
@@ -56,13 +70,22 @@ export default function Feed() {
       const reviewedToday = todayAll.filter((x) => x.checkout_at != null && x.status !== 'pending');
       const ids = [...new Set([...queue, ...reviewedToday].map((x) => x.id))];
       let lines: VisitLine[] = [];
+      const prev: Record<string, CountSide> = {};
       if (ids.length) {
-        const l = await sb.from('visit_lines').select('*').in('visit_id', ids);
+        // One batched call for every card's comparison base, not one per card (B3).
+        const [l, pv] = await Promise.all([
+          sb.from('visit_lines').select('*').in('visit_id', ids),
+          sb.rpc('previous_visits', { p_visits: ids }),
+        ]);
         if (l.error) throw l.error;
+        if (pv.error) throw pv.error;
         lines = (l.data ?? []) as VisitLine[];
+        for (const r of (pv.data ?? []) as PrevRow[]) {
+          prev[r.visit_id] = { checkin_at: r.prev_checkin_at, coordinator_id: r.prev_coordinator_id, lines: r.prev_lines };
+        }
       }
       const routedIds = [...new Set(((r.data ?? []) as { coordinator_id: string }[]).map((x) => x.coordinator_id))];
-      return { queue, reviewedToday, todayAll, open: (o.data ?? []) as Visit[], lines, routedIds };
+      return { queue, reviewedToday, todayAll, open: (o.data ?? []) as Visit[], lines, prev, routedIds };
     },
     [reviewIds.join(',')],
     EMPTY,
@@ -155,6 +178,12 @@ export default function Feed() {
               <button className="mini" onClick={() => setOpenPhoto(v.id)}>شوف الصور</button>
             </div>
           )}
+
+        {/* Before → now per SKU, read before deciding. Informs only; never auto-rejects. */}
+        <VisitCompare
+          now={{ checkin_at: v.checkin_at, coordinator_id: v.coordinator_id, lines: data.lines.filter((l) => l.visit_id === v.id) }}
+          before={data.prev[v.id] ?? null}
+        />
 
         {v.status === 'pending' && (
           <div className="btnrow">

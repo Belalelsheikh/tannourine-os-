@@ -46,6 +46,16 @@ Follow PRD §17 exactly. After each phase, run the matching acceptance items fro
 - With LiveCamera the page is no longer killed by a camera app, but keep A5's order: draft + `visit_active` + insert on the first camera tap.
 - Visit form errors name the SKU and field via `firstIncomplete()` (src/lib/visitDraft.ts); last-visit counts are a line under the SKU name, never a Stepper placeholder (it read as a typed value).
 
+## Build notes from Batch B/C (2026-11-03: branches, comparison, reports)
+- Migrations `20261103120000_batch_b_branches_compare.sql` and `20261103120100_reports.sql` must be applied **before** this build ships: «الفروع» calls `outlet_visit_summary()`, the Feed calls `previous_visits()`, «التقارير» reads `report_lines`, and the «الصنف مش في الفرع» button now saves that value, which the old `visit_lines_zero_reason_check` refuses.
+- Visit lines lock at checkout: `vlines_upd` requires `checkout_at is null`. VisitForm writes lines before the checkout update, so a failed checkout retries as before; a retry whose checkout already landed gets an RLS error on the upsert, and the form then reads the server's `checkout_at` and finishes instead of failing. `vlines_ins` still has no `checkout_at` check.
+- Comparison base («قبل ← دلوقتي») = the outlet's previous completed visit not flagged `unclosed`, by `checkout_at` — the same rule as `last_visit_for_outlet`. Markers (stock rose, same numbers, first visit) inform only; no auto-reject, no per-coordinator score. Logic: `src/lib/compare.ts`.
+- A line whose shelf + warehouse rose vs the last visit makes a `kind='shelf'` photo required at submit (client-side only; the checkout trigger does not check it, so an old cached client can skip it). Off-route visits get no last visit, so the rule cannot fire there.
+- «تثبيت الموقع» on the branch page confirms the existing pin, else `pin_proposed_lat/lng`, else the client median of ≥3 loaded check-ins. supervisor/mgmt only (router sees no button).
+- «المواقع» and reports compute distance on read against the outlet's **current** pin (haversine), not the stored `distance_m`. The branch page's check-in list shows stored `distance_m`.
+- Reports: never add shelf or warehouse across SKUs; sold is labelled «حسب تسجيل المنسق». `report_lines` has one row per line, so the 17 legacy visits submitted with no lines are not in it. Planned stops use today's routes for every day in the range (routes keep no history).
+- mgmt's outlet editor tab is now «بيانات الفروع»; «الفروع» is the visit view.
+
 ## Agent skills
 
 ### Issue tracker

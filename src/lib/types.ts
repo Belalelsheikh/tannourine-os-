@@ -9,7 +9,8 @@ export type OrderStatus = 'pending' | 'leader_approved' | 'approved' | 'rejected
 export type InvoiceStatus = 'created' | 'issued' | 'dispatched' | 'delivered' | 'matched' | 'short' | 'void';
 export type CollectionStatus = 'received' | 'deposited' | 'cleared' | 'returned';
 export type CollectionType = 'cheque' | 'transfer';
-export type ZeroReason = 'المخزن فاضي' | 'الفرع لم يطلب' | 'أوردر متأخر' | 'مساحة الرف';
+/** «الصنف مش في الفرع» is saved only by its button (Batch C4); older lines carry «الفرع لم يطلب». */
+export type ZeroReason = 'المخزن فاضي' | 'الفرع لم يطلب' | 'أوردر متأخر' | 'مساحة الرف' | 'الصنف مش في الفرع';
 
 export interface Profile {
   id: string;

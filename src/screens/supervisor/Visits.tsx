@@ -1,15 +1,17 @@
 import { useMemo, useState } from 'react';
 import { useApp, useQuery } from '../../lib/app';
 import { sb } from '../../lib/supabase';
-import { addDays, cairoDateOf, cairoDayRange, cairoTime, cairoToday, weekdayOf } from '../../lib/cairo';
+import { addDays, cairoDateOf, cairoTime, cairoToday, weekdayOf } from '../../lib/cairo';
 import { DAY_LABELS, FLAG_LABEL } from '../../lib/format';
 import {
-  cairoRange, dayDiff, filterVisits, groupByCoordinator, historyCoordinators, lastWeek, outletTimeline, zeroCount,
+  cairoRange, filterVisits, groupByCoordinator, historyCoordinators, lastWeek, zeroCount,
   type HistoryFilter, type VisitWithLines,
 } from '../../lib/visitsHistory';
 import { Empty, ErrLine, Field, Hint, Pill, Sect, Segmented } from '../../components/ui';
-import { VisitDetail, visitStatus } from '../../components/VisitDetail';
-import type { Followup, Order, OrderLine, VisitStatus } from '../../lib/types';
+import { visitStatus } from '../../components/VisitDetail';
+import { RowDetail } from '../../components/VisitRowDetail';
+import BranchPage from '../../components/BranchPage';
+import type { VisitStatus } from '../../lib/types';
 
 /** PostgREST's default row cap; past it the oldest visits in the range are silently cut. */
 const LIMIT = 1000;
@@ -38,62 +40,8 @@ const label = (ts: string) => {
   return `${DAY_LABELS[weekdayOf(d)]} ${d.slice(8, 10)}/${d.slice(5, 7)} · ${cairoTime(ts)}`;
 };
 
-interface Extras { followups: Followup[]; orders: Order[]; orderLines: OrderLine[] }
-
-/** Follow-ups and same-day orders for one visit; loaded only once the row is opened. */
-function RowDetail({ v, onOpenOutlet, onOpenFeed }: {
+function Row({ v, hideCoordinator, open, onToggle, onOpenOutlet, onOpenFeed }: {
   v: VisitWithLines;
-  onOpenOutlet?: () => void;
-  onOpenFeed: () => void;
-}) {
-  const [photo, setPhoto] = useState(false);
-  const { data } = useQuery<Extras>(
-    async () => {
-      const { from, to } = cairoDayRange(cairoDateOf(v.checkin_at));
-      const [f, o] = await Promise.all([
-        sb.from('followups').select('*').eq('visit_id', v.id),
-        sb.from('orders').select('*').eq('outlet_id', v.outlet_id).gte('created_at', from).lt('created_at', to)
-          .order('created_at'),
-      ]);
-      for (const res of [f, o]) if (res.error) throw res.error;
-      const orders = (o.data ?? []) as Order[];
-      let orderLines: OrderLine[] = [];
-      if (orders.length) {
-        const l = await sb.from('order_lines').select('*').in('order_id', orders.map((x) => x.id));
-        if (l.error) throw l.error;
-        orderLines = (l.data ?? []) as OrderLine[];
-      }
-      return { followups: (f.data ?? []) as Followup[], orders, orderLines };
-    },
-    [v.id],
-    { followups: [], orders: [], orderLines: [] },
-  );
-  const pending = v.status === 'pending' && v.checkout_at != null;
-
-  return (
-    <>
-      {(onOpenOutlet || pending) && (
-        <div className="btnrow" style={{ marginTop: 10 }}>
-          {onOpenOutlet && <button type="button" className="mini" onClick={onOpenOutlet}>سجل الفرع</button>}
-          {pending && <button type="button" className="mini" onClick={onOpenFeed}>راجعها في المتابعة ←</button>}
-        </div>
-      )}
-      <VisitDetail
-        v={v}
-        lines={v.visit_lines}
-        followups={data.followups}
-        orders={data.orders}
-        orderLines={data.orderLines}
-        photoShown={photo}
-        onShowPhoto={() => setPhoto(true)}
-      />
-    </>
-  );
-}
-
-function Row({ v, gap, hideCoordinator, open, onToggle, onOpenOutlet, onOpenFeed }: {
-  v: VisitWithLines;
-  gap?: number | null;
   /** Inside a coordinator's group the name is already in the heading. */
   hideCoordinator?: boolean;
   open: boolean;
@@ -116,7 +64,6 @@ function Row({ v, gap, hideCoordinator, open, onToggle, onOpenOutlet, onOpenFeed
           <span className="small">
             <span className="mono">{label(v.checkin_at)}</span>
             {!hideCoordinator && <> · {profileById(v.coordinator_id)?.full_name ?? '؟'}</>}
-            {gap != null && <> · بعد <span className="mono">{gap}</span> يوم من اللي قبلها</>}
           </span>
           <br />
           <Pill tone={st.tone}>{st.label}</Pill>
@@ -166,18 +113,6 @@ export default function SupervisorVisits({ onOpenFeed }: { onOpenFeed: () => voi
     [],
   );
 
-  // An outlet's whole record, not just the visits inside the current range.
-  const outletList = useQuery<VisitWithLines[]>(
-    async () => {
-      if (drill == null || ids.length === 0) return [];
-      const { data, error } = await base().eq('outlet_id', drill);
-      if (error) throw error;
-      return (data ?? []) as VisitWithLines[];
-    },
-    [drill, ids.join(',')],
-    [],
-  );
-
   const shown = useMemo(() => filterVisits(list.data, f, outletById), [list.data, f, outletById]);
   const groups = useMemo(() => groupByCoordinator(shown), [shown]);
   const toggle = (id: string) => setOpen((s) => {
@@ -188,40 +123,7 @@ export default function SupervisorVisits({ onOpenFeed }: { onOpenFeed: () => voi
   const set = <K extends keyof HistoryFilter>(k: K, val: HistoryFilter[K]) => setF((x) => ({ ...x, [k]: val }));
 
   if (drill != null) {
-    const o = outletById(drill);
-    const timeline = outletTimeline(outletList.data);
-    const last = timeline[0]?.visit;
-    return (
-      <>
-        <div className="btnrow" style={{ marginTop: 0, marginBottom: 10 }}>
-          <button type="button" className="mini" onClick={() => setDrill(null)}>→ رجوع للزيارات</button>
-        </div>
-        <Sect>سجل الفرع · <bdi>{o ? `${o.chain} ${o.name}` : '؟'}</bdi></Sect>
-        <ErrLine>{outletList.error}</ErrLine>
-        {outletList.loading && outletList.data.length === 0 && <p className="small">جارٍ التحميل…</p>}
-        {last && (
-          <p className="small" style={{ marginBottom: 10 }}>
-            <span className="mono">{timeline.length}</span> زيارة · آخر زيارة{' '}
-            {(() => {
-              const n = dayDiff(cairoDateOf(last.checkin_at), cairoToday());
-              return n === 0 ? 'النهارده' : <>من <span className="mono">{n}</span> يوم</>;
-            })()}
-          </p>
-        )}
-        {!outletList.loading && timeline.length === 0 && <Empty>مفيش زيارات متسجلة للفرع ده</Empty>}
-        {timeline.map(({ visit, gap }) => (
-          <Row
-            key={visit.id}
-            v={visit}
-            gap={gap}
-            open={open.has(visit.id)}
-            onToggle={() => toggle(visit.id)}
-            onOpenFeed={onOpenFeed}
-          />
-        ))}
-        <Hint>الأيام والأوقات بتوقيت القاهرة.</Hint>
-      </>
-    );
+    return <BranchPage outletId={drill} onBack={() => setDrill(null)} backLabel="رجوع للزيارات" onOpenFeed={onOpenFeed} />;
   }
 
   return (
