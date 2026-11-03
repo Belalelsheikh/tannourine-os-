@@ -10,7 +10,10 @@ begin
     from routes r join profiles p on p.id = r.coordinator_id
    where p.role = 'coordinator' and p.active limit 1;
   select id into sku from skus where active order by id limit 1;
-  update visits set checkout_at = now() where coordinator_id = c and checkout_at is null;
+  -- Close the coordinator's open visits the way a supervisor does (`unclosed` skips the
+  -- checkout guard's count and gate checks), so the insert below is not a second open visit.
+  update visits set checkout_at = now(), flags = flags || '{unclosed}'
+   where coordinator_id = c and checkout_at is null;
 
   perform set_config('request.jwt.claims', json_build_object('sub', c, 'role', 'authenticated')::text, true);
   execute 'set local role authenticated';
