@@ -1,4 +1,4 @@
--- Batch B dry-run: apply 20261103120000_batch_b_branches_compare.sql in the same transaction,
+-- Batch B dry-run: apply 20261103145205_batch_b_branches_compare.sql in the same transaction,
 -- then run this. It acts as a real coordinator under RLS, reports, and rolls back
 -- (`raise exception 'RESULTS …'`), so nothing is kept.
 do $$
