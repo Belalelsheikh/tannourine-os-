@@ -46,6 +46,11 @@ Follow PRD §17 exactly. After each phase, run the matching acceptance items fro
 - With LiveCamera the page is no longer killed by a camera app, but keep A5's order: draft + `visit_active` + insert on the first camera tap.
 - Visit form errors name the SKU and field via `firstIncomplete()` (src/lib/visitDraft.ts); last-visit counts are a line under the SKU name, never a Stepper placeholder (it read as a typed value).
 
+## Build notes from Batch A7 (2026-11-05: gate photo removed)
+- **The gate photo no longer exists as a step; this overrides the gate-photo rules in the Batch A and A6 notes above.** Coordinators kept hitting camera failures, so Belal cancelled it. Check-in is GPS → fence → visit row → count form (`CheckinStep`, `createVisit`). The checkout trigger only checks the count; `visits_checkin_fence` writes `gate_required = false`.
+- Existing gate photos stay in `visit_photos` and still show in supervisor review, so `kind = 'gate'`, `source`, `file_age_s` and `sha256` remain. Don't drop them.
+- The fence rules are unchanged. Other visit photos (shelf, cooler, other) are unchanged.
+
 ## Agent skills
 
 ### Issue tracker

@@ -27,7 +27,6 @@ const FIELD_NAME: Record<Exclude<LineField, 'reason'>, string> = { shelf: 'ال�
 /** Checkout-trigger errors, in the coordinator's words. */
 function submitError(e: unknown): string {
   const t = errText(e);
-  if (t.includes('gate_photo_required')) return 'صورة باب الفرع ناقصة — ارجع وادخل الزيارة تاني من «كمّل الزيارة»';
   if (t.includes('visit_incomplete')) return 'في أصناف ما اتسجلتش على السيرفر';
   return t;
 }
@@ -214,7 +213,7 @@ export default function VisitForm({
       const lineRes = await sb.from('visit_lines').upsert(rows, { onConflict: 'visit_id,sku_id' });
       if (lineRes.error) throw lineRes.error;
 
-      // 2) checkout: second and final GPS read. The DB checks completeness and the gate photo,
+      // 2) checkout: second and final GPS read. The DB checks completeness,
       // keeps far_checkin, and sets checkout_distance_m / far_checkout itself.
       const pos = await getPosition();
       const checkoutAt = new Date();

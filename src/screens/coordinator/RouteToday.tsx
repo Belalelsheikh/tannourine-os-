@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp, useQuery } from '../../lib/app';
-import { sb, errText } from '../../lib/supabase';
+import { sb } from '../../lib/supabase';
 import { GPS_PRIVACY_LINE, gpsNoticeSeen, markGpsNoticeSeen } from '../../lib/geo';
-import { activeKey, loadGateDraft, pruneDrafts, type GateDraft } from '../../lib/visitDraft';
+import { activeKey, pruneDrafts } from '../../lib/visitDraft';
 import { ORD_LABEL, isToday, stampOf, todayISO } from '../../lib/format';
 import { Empty, ErrLine, Field, Hint, Pill, StatTiles } from '../../components/ui';
 import VisitForm from './VisitForm';
-import GateStep from './GateStep';
+import CheckinStep from './CheckinStep';
 import OrderForm from './OrderForm';
 import type { Outlet, Visit } from '../../lib/types';
 
@@ -14,7 +14,7 @@ type View =
   | { k: 'list' }
   | { k: 'search' }
   | { k: 'outlet'; outletId: number; offRoute: boolean }
-  | { k: 'gate'; outlet: Outlet; offRoute: boolean; existing: Visit | null; draft: GateDraft | null }
+  | { k: 'checkin'; outlet: Outlet; offRoute: boolean }
   | { k: 'form'; visit: Visit; outlet: Outlet }
   | { k: 'order'; outlet: Outlet };
 
@@ -74,18 +74,10 @@ export default function RouteToday() {
     } catch { /* storage unavailable — the banner still offers «كمّل الزيارة» */ }
   };
 
-  /** Into the count form — via the gate photo if this visit still needs one. */
-  const resume = async (visit: Visit, outlet: Outlet) => {
+  /** Back into the count form of a visit that is already open. */
+  const resume = (visit: Visit, outlet: Outlet) => {
     setErr(null);
     setActive(visit.id);
-    if (visit.gate_required) {
-      const gate = await sb.from('visit_photos').select('id').eq('visit_id', visit.id).eq('kind', 'gate').limit(1);
-      if (gate.error) { setErr(errText(gate.error)); return; }
-      if ((gate.data?.length ?? 0) === 0) {
-        setView({ k: 'gate', outlet, offRoute: visit.off_route, existing: visit, draft: null });
-        return;
-      }
-    }
     setView({ k: 'form', visit, outlet });
   };
 
@@ -101,8 +93,8 @@ export default function RouteToday() {
       const existing = myVisits.find(
         (v) => v.outlet_id === outlet.id && v.checkout_at == null && isToday(v.checkin_at),
       );
-      if (existing) { await resume(existing, outlet); return; }
-      setView({ k: 'gate', outlet, offRoute, existing: null, draft: null });
+      if (existing) { resume(existing, outlet); return; }
+      setView({ k: 'checkin', outlet, offRoute });
     } finally {
       setStarting(false);
     }
@@ -115,37 +107,25 @@ export default function RouteToday() {
     if (!profile || visitsLoading || visitsError || resumedOnce.current) return;
     resumedOnce.current = true;
     const open = myVisits.filter((v) => v.checkout_at == null);
-    const closed = myVisits.filter((v) => v.checkout_at != null);
     try {
-      pruneDrafts(localStorage, new Set(open.map((v) => v.id)), new Set(closed.map((v) => v.id)));
+      pruneDrafts(localStorage, new Set(open.map((v) => v.id)));
     } catch { /* ignore */ }
     let activeId: string | null = null;
     try { activeId = localStorage.getItem(activeKey(profile.id)); } catch { /* ignore */ }
     const v = open.find((x) => x.id === activeId);
     const o = v ? outletById(v.outlet_id) : undefined;
-    if (v && o && view.k === 'list') { void resume(v, o); return; }
-    if (!activeId || v) return;
-    // Killed between the camera tap and the server ack (A5): the row may never have landed.
-    // Back to the gate step with the same ids, unless that visit is known or from another day.
-    const gd = loadGateDraft(localStorage, activeId);
-    const go = gd ? outletById(gd.outlet_id) : undefined;
-    if (gd && go && gd.coordinator_id === profile.id && isToday(gd.checkin_at)
-      && !closed.some((x) => x.id === activeId) && view.k === 'list') {
-      setView({ k: 'gate', outlet: go, offRoute: gd.off_route, existing: null, draft: gd });
-    } else setActive(null);
+    if (v && o && view.k === 'list') { resume(v, o); return; }
+    if (activeId && !v) setActive(null);
   }, [profile?.id, visitsLoading, visitsError, myVisits]);
 
-  // ---------- check-in: fence + gate photo ----------
-  if (view.k === 'gate') {
+  // ---------- check-in: GPS + fence ----------
+  if (view.k === 'checkin') {
     return (
-      <GateStep
-        key={view.existing?.id ?? view.draft?.visit_id ?? `new-${view.outlet.id}`}
+      <CheckinStep
+        key={`new-${view.outlet.id}`}
         outlet={view.outlet}
         offRoute={view.offRoute}
-        existing={view.existing}
-        draft={view.draft}
-        onStart={setActive}
-        onCancel={() => { setActive(null); bump(); setView({ k: 'outlet', outletId: view.outlet.id, offRoute: view.offRoute }); }}
+        onCancel={() => { bump(); setView({ k: 'outlet', outletId: view.outlet.id, offRoute: view.offRoute }); }}
         onReady={(visit) => {
           bump();
           setActive(visit.id);
@@ -295,7 +275,7 @@ export default function RouteToday() {
               className="mini dark"
               onClick={() => {
                 const o = outletById(openVisit.outlet_id);
-                if (o) void resume(openVisit, o);
+                if (o) resume(openVisit, o);
                 else toast('الفرع مش موجود');
               }}
             >
