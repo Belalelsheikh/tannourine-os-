@@ -71,11 +71,8 @@ Alexandria: محمد عبد الحميد and the 67 الإسكندرية outlets
 weekdays 0–4, 8/7/5/5/6) went live on 2026-09-14; the remaining 36 Alexandria outlets are in
 the estate but on no route.
 
-**Gate photo**:
-The photo of an outlet's door taken at check-in, proving the coordinator was there. Since
-Batch A6 (2026-11-02) it comes from the in-page camera (`visit_photos.source = 'live'`); a
-file input is offered only after that camera fails, must be under two minutes old by the
-file's timestamp, and is tagged `'file'` with its age. Supervisors see «صورة من ملف» or
-«صورة متكررة» (same bytes as another visit) on it — a prompt to look, not a rejection. The
-visit form now names the empty field («{الصنف} — خانة الرف فاضية») instead of «في خانات فاضية».
+**Gate photo** (retired 2026-11-05):
+The photo of an outlet's door that was required at check-in from 28 Oct to 5 Nov 2026. Removed
+in Batch A7 after repeated camera failures in the field. Photos already taken stay on their
+visits, and supervisors still see them. Check-in now rests on GPS and the fence only.
 _Avoid_: check-in selfie, door shot, gallery photo

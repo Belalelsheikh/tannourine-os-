@@ -213,6 +213,12 @@ same expressions (the file's header says how). `supabase/tests/batch_a_visits.te
 dry run: paste the migrations and the test between `begin;` and `rollback;` and it reports every
 check and keeps nothing.
 
+### Batch A7 (2026-11-05): gate photo removed
+Apply the migration first, then deploy. The order is safe in that direction: the old app still
+works against the new database, and a visit stuck on the camera opens straight into the count
+from «كمّل الزيارة» once the app is reloaded. The earlier batch notes below describe the step as
+it was.
+
 ### Batch A5 (2026-10-29): gate step survives the camera, server check-in time
 
 Applied to production on 2026-10-29 at 15:28 Cairo time as `20261029122814_checkin_server_time`,

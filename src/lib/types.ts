@@ -81,7 +81,7 @@ export interface Visit {
   checkin_reason: string | null;
   /** Check-out point to check-in point; set by the DB on checkout. */
   checkout_distance_m: number | null;
-  /** False for visits from before the gate photo existed. */
+  /** True only for visits from 28 Oct to 5 Nov 2026, when a gate photo was required. No longer read. */
   gate_required: boolean;
   created_at: string;
 }
@@ -96,7 +96,7 @@ export interface VisitPhoto {
   taken_at: string;
   lat: number | null;
   lng: number | null;
-  /** Gate photos (A6): in-page camera frame, or the file-input fallback. Other kinds stay 'file'. */
+  /** Gate photos from before Batch A7: in-page camera frame, or file input. Other kinds stay 'file'. */
   source: 'live' | 'file';
   file_age_s: number | null;
   sha256: string | null;
